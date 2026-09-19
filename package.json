@@ -9,7 +9,7 @@
   "type": "module",
   "bin": { "figma-local": "bin/figma-local.mjs" },
   "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "plugin/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "schemas/", "examples/", "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
+  "files": ["bin/", "src/", "plugin/", "schemas/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "assets/preview.png", "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
   "scripts": { "test": "node --test tests/test_*.mjs", "check": "node --check bin/figma-local.mjs && node --check plugin/main.js" },
   "devDependencies": { "ajv": "8.20.0" }
 }

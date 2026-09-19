@@ -6,7 +6,6 @@
 
 ## 贡献原则
 
-- 每项结论标注 `Validated`、`Hypothesis`、`Decided` 或 `Decision needed`。
 - 修改范围保持小而可审阅。
 - 不提交真实 file key、页面 ID、用户设计内容、临时 token 或 session 文件。
 - 不执行来源不明的 Figma 脚本。
@@ -23,17 +22,6 @@
 3. 新增或更新的测试场景。
 4. 安全与兼容性影响。
 5. 尚未验证的部分。
-
-## 设计变更
-
-涉及以下内容时先增加 ADR：
-
-- localhost 协议与认证。
-- arbitrary JavaScript 执行模型。
-- transaction、Undo 与 rollback 语义。
-- context schema 的破坏性变更。
-- 远程服务、遥测或账号系统。
-- 许可证与商业化边界。
 
 ## 验证层级
 

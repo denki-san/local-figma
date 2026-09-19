@@ -1,6 +1,6 @@
 # 两条顶层使用路径
 
-第一次使用可参考 [两份合成 brief](../examples/briefs/README.md)，每批修改按 [设计评审清单](design-review.md) 检查。
+第一次使用让 Agent 根据对话整理 brief；每批修改查看结果与截图。
 
 ## 现有稿精修
 
@@ -56,11 +56,3 @@
 > 读取 brief-design.json 与参考图。先总结用户任务和信息优先级，提出两个有明确差异的结构方向。方向确定后，先构建一个关键区域验证字体、颜色、间距和组件语言，再扩展页面。通过 figma-local inspect/run/result/preview 小步构建原生图层。每批检查截图，完成后检查长文、空状态、错误状态与主要点击路径。把未验证项目留在 review 字段中。
 
 高质量依赖真实内容、清晰层级、组件一致性和视觉迭代。完整 Plugin API 是执行能力；截图、结构读回和人工评审共同决定设计是否达标。
-
-## 开源差异化方向
-
-本项目集中于两种场景共用的可追踪编辑循环：链接明确绑定、脚本留存、任务一次交付、结构读回、局部截图和场景 brief。Agent 可以使用公开 CLI 和 JSON 接入。
-
-当前 Alpha 已实现绑定、任务与结果留存、inspect、preview、目标子树 diff、离线 history、有限结构 validate、目标区域 design-system 发现、场景 brief 与 guide-check 缺口引导。跨页设计系统检索、视觉回归和受保护恢复属于接下来的实现目标。第三方工具的能力对比见 [研究矩阵](research/landscape-matrix.md)，公开竞争声明需随版本重新核实。
-
-设计系统读取使用官方异步 API：[样式查询](https://developers.figma.com/docs/plugins/api/figma/)、[变量查询](https://developers.figma.com/docs/plugins/api/figma-variables/)、[实例主组件查询](https://developers.figma.com/docs/plugins/api/InstanceNode/)。真实文档与库访问结果仍需在用户环境验证。

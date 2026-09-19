@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-项目已有可本地安装运行的 Alpha，尚未公开发布。以下描述当前实现；未来控制单独列出。
+项目已通过 GitHub Release 提供试用 Alpha。以下描述当前实现。
 
 ## 核心边界
 
@@ -31,7 +31,7 @@
 
 ## 漏洞报告
 
-公开发布前需要确定私密报告渠道。当前请避免在公开 issue 中提交 token、用户文件内容或可复现的敏感设计数据。
+安全问题请先联系维护者协商私密提交方式；不要在公开 issue 中提交 token、用户文件内容或可复现的敏感设计数据。
 
 ## 高优先级问题
 
@@ -42,5 +42,3 @@
 - rollback 撤销用户或其他 Agent 的并发修改。
 - run artifact 泄漏文本、图片、pluginData 或文件标识。
 - 远程脚本、prompt injection 或依赖供应链导致任意代码执行。
-
-详细模型见 [docs/safety-and-threat-model.md](docs/safety-and-threat-model.md)。
