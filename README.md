@@ -21,7 +21,7 @@
 
 你负责选画板、说需求、看效果；Agent 通过 local-figma 读取、修改和预览设计。
 
-![使用流程：你选中画板并说明需求，Agent 通过 local-figma 操作 Figma，再交付截图和修改说明](assets/usage-flow.png)
+![深色手绘使用流程：你选中画板、说明需求，Agent 通过 local-figma 修改 Figma，再返回截图和改动摘要](assets/usage-flow-dark.png)
 
 *首次使用需要安装并运行插件，之后就可以围绕画板继续对话、调整效果。具体操作如下。*
 
@@ -63,6 +63,14 @@ Agent 会给你一个插件配置文件的位置，并带你完成这几步：
 > 我想：【例如，把报名按钮的文字改成「马上报名」，其他地方保持原样】
 
 Agent 完成后，你会收到截图和修改说明。回到 Figma 检查一下；如果做了页面跳转，也点击按钮试试效果。
+
+## 工作流如何工作
+
+Agent 把任务交给本地 CLI；桥接服务把任务传给 Figma 插件；插件通过 Figma Plugin API 读写图层。Agent 再读回结果和截图，检查后交付给你。
+
+![深色手绘工作链路：Agent 通过 local-figma CLI、本地 bridge 和 Figma 插件修改可编辑图层，再读回结果](assets/architecture-flow-dark.png)
+
+*虚线框圈出 local-figma 项目中的 CLI、本地 bridge 和 Figma 插件。*
 
 ## 介绍五种使用场景
 
