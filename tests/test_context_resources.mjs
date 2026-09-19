@@ -14,6 +14,36 @@ function fixture(target) {
   vm.runInNewContext(source,{figma,__html__:'',setTimeout:cb=>{timers.set(++timerId,cb);return timerId;},clearTimeout:id=>timers.delete(id)});
   return {figma,page,messages,events,pageEvents,timers,tick:()=>{const pending=[...timers.values()];timers.clear();pending.forEach(cb=>cb());},start:()=>figma.ui.onmessage({type:'context-request',contextNonce:'test-context'})};
 }
+test('参考推荐最多三个且只读，不加载无关页面',async()=>{
+ const target={id:'1:2',type:'FRAME',name:'任务概览',children:[]};const f=fixture(target);target.parent=f.page;
+ f.page.children=[target,{id:'1:3',type:'FRAME',name:'任务详情'},{id:'1:4',type:'FRAME',name:'无关订单'}];
+ let loaded=0;
+ const other={id:'2:1',name:'任务参考',children:[{id:'2:2',type:'FRAME',name:'任务列表'},{id:'2:3',type:'FRAME',name:'任务详情'}],loadAsync:async()=>{loaded++;}};
+ f.figma.root={children:[f.page,other,{id:'3:1',name:'无关',loadAsync:()=>{throw Error('不应加载');}}]};
+ const before=JSON.stringify(other.children);await f.start();await flush();
+ const context=f.messages.at(-1).context;
+ assert.equal(loaded,1);assert.equal(context.references.candidates.length,3);
+ assert(context.references.candidates.every(n=>n.readOnly&&n.id!==target.id));
+ assert.equal(JSON.stringify(other.children),before);assert.equal(context.resources.state,'ready');
+ const revisions=f.messages.filter(m=>m.type==='context-update').map(m=>m.context.revision);
+ assert(revisions.every((n,i)=>!i||n>revisions[i-1]));
+ f.events.get('selectionchange')();await flush();
+ const all=f.messages.filter(m=>m.type==='context-update').map(m=>m.context.revision);
+ assert(all.every((n,i)=>!i||n>all[i-1]));
+});
+test('参考推荐在切换选区后丢弃旧页面的慢结果',async()=>{
+ let finish;const target={id:'1:2',type:'FRAME',name:'任务概览',children:[]};const f=fixture(target);
+ f.page.children=[target];f.figma.root={children:[f.page,{id:'2:1',name:'任务参考',children:[{id:'2:2',type:'FRAME',name:'任务详情'}],loadAsync:()=>new Promise(resolve=>{finish=resolve;})}]};
+ await f.start();await flush();f.page.selection=[{id:'1:9',type:'FRAME',name:'订单',children:[]}];
+ f.events.get('selectionchange')();const offset=f.messages.length;finish();await flush();
+ assert(f.messages.slice(offset).every(m=>m.context.target.id==='1:9'));
+});
+test('参考推荐无法读取页面时报告限制，不伪造成功',async()=>{
+ const f=fixture({id:'1:2',type:'FRAME',name:'任务概览',children:[]});
+ f.page.children=[];f.figma.root={children:[f.page,{id:'2:1',name:'参考',loadAsync:async()=>{throw Error('不可读');}}]};
+ await f.start();await flush();const refs=f.messages.at(-1).context.references;
+ assert.equal(refs.state,'limited');assert.equal(refs.candidates.length,0);assert.equal(refs.warnings.length,1);
+});
 test('轻量面板从绑定解析目标名称，提示越界选区与错误文件',async()=>{
   const target={id:'1:2',type:'FRAME',name:'目标卡片',children:[]};
   const f=fixture(target);target.parent=f.page;

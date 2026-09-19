@@ -25,6 +25,51 @@ function watchContextPage() {
 }
 // 网页组件常有多层包装；在节点总预算不变的前提下完整覆盖常见组件树。
 const snapshotDepth = 32;
+// 参考推荐只读且有界；名称相似度供 Agent 判断，不扩展写入授权。
+async function discoverReferences(target, isCurrent) {
+  const words = value => {
+    const text = String(value || '').toLowerCase();
+    const tokens = text.match(/[a-z]{3,}|[\u4e00-\u9fff]{2,}/g) || [];
+    return new Set(tokens.flatMap(token => /^[\u4e00-\u9fff]+$/.test(token) ? Array.from({length:token.length-1},(_,i)=>token.slice(i,i+2)) : [token]));
+  };
+  const page = figma.currentPage;
+  let root = target;
+  while (root.parent && root.parent.type !== 'PAGE') root = root.parent;
+  const query = words((target.name || '') + ' ' + (root.name || ''));
+  const overlap = name => [...words(name)].filter(word=>query.has(word)).length;
+  const referenceName = name => /reference|design.system|library|参考|设计系统|组件库/i.test(name || '');
+  const pages = (figma.root?.children || []).filter(p=>p.id!==page.id)
+    .map(p=>({page:p,score:overlap(p.name)*4+(referenceName(p.name)?3:0)}))
+    .filter(p=>p.score>0).sort((a,b)=>b.score-a.score||a.page.id.localeCompare(b.page.id)).slice(0,2);
+  const found=[], warnings=[];let scanned=0;
+  const scan = p => {
+    const children=p.children || [];
+    if(children.length>100)warnings.push('页面 '+p.name+' 只扫描前100个顶层区域');
+    for(const node of children.slice(0,100)){
+      if(!isCurrent())return;
+      scanned++;
+      if(node.id===root.id||node.visible===false||!['FRAME','COMPONENT','COMPONENT_SET','SECTION'].includes(node.type))continue;
+      const shared=overlap(node.name),design=referenceName(node.name)||referenceName(p.name);
+      if(!shared&&!design)continue;
+      const score=shared*4+(design?3:0)+(p.id===page.id?1:0);
+      found.push({id:node.id,name:String(node.name || '').slice(0,200),pageId:p.id,pageName:String(p.name || '').slice(0,200),type:node.type,score,
+        reason:shared?'名称与当前区域相关':'名称标记为参考或设计系统',readOnly:true});
+    }
+  };
+  scan(page);
+  for(const entry of pages){
+    if(!isCurrent())return null;
+    let timer;
+    try {
+      await Promise.race([entry.page.loadAsync(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('页面加载超时')),1500);})]);
+      if(!isCurrent())return null;
+      scan(entry.page);
+    }catch(error){warnings.push('参考页 '+entry.page.name+' 暂不可读');}
+    finally{clearTimeout(timer);}
+  }
+  return {state:warnings.length?'limited':'ready',candidates:found.sort((a,b)=>b.score-a.score||a.id.localeCompare(b.id)).slice(0,3),scanned,warnings,
+    limitation:'按名称推荐当前页及最多两个相关页面的顶层区域；空结果不代表文件没有参考。Agent需读取候选并判断，推荐不授予跨区写入权限。'};
+}
 function publishContext() {
   if (!contextNonce) return;
   if (contextRefreshTimer !== null) {
@@ -60,24 +105,30 @@ function publishContext() {
     const context = { fileKey: figma.fileKey, pageId: page.id, pageName: page.name,
       selection: selection.map(node => ({ id: node.id, name: node.name, type: node.type, parentId: node.parent?.id, parentType: node.parent?.type })),
       target: target ? tree(target, 0, { count: 0, maxDepth: 1 }) : null,
-      needsSelection: !target, revision: generation * 2, capturedAt: Date.now(), resources: { state: target ? 'loading' : 'needs-selection' } };
+      needsSelection: !target, revision: generation * 4, capturedAt: Date.now(), resources: { state: target ? 'loading' : 'needs-selection' } };
     figma.ui.postMessage({ type: 'context-update', contextNonce, context });
     if (target) {
       const nonce = contextNonce;
       const selectionKey = selection.map(node => node.id).join(',');
       const current = () => generation === contextGeneration && nonce === contextNonce && figma.currentPage.id === page.id && !target.removed && figma.currentPage.selection.map(node => node.id).join(',') === selectionKey;
+      let enriched = { ...context };
+      let revision = context.revision;
+      const publish = patch => {
+        if(!current())return;
+        enriched = {...enriched,...patch,revision:++revision};
+        if(JSON.stringify(enriched).length>256*1024)enriched.resources={state:'limited',message:'资源上下文超过大小限制，请缩小选择范围'};
+        figma.ui.postMessage({type:'context-update',contextNonce:nonce,context:enriched});
+      };
+      if(figma.root)discoverReferences(target,current).then(references=>{if(references)publish({references});}).catch(()=>publish({references:{state:'limited',candidates:[],warnings:['参考扫描暂不可用']}}));
       // 先推送即时选区，再异步补充有界资源；旧选择的慢请求不能覆盖新上下文。
       discoverDesignSystem(target, { maxNodes: 256, maxDepth: 8, isCurrent: current }).then(resources => {
-        if (!current()) return;
-        const enriched = { ...context, revision: context.revision + 1, resources: { state: resources.warnings.length ? 'needs-review' : 'ready', ...resources } };
-        if (JSON.stringify(enriched).length > 256 * 1024) enriched.resources = { state: 'limited', message: '资源上下文超过大小限制，请缩小选择范围' };
-        figma.ui.postMessage({ type: 'context-update', contextNonce: nonce, context: enriched });
+        publish({resources:{state:resources.warnings.length?'needs-review':'ready',...resources}});
       }).catch(error => {
-        if (current()) figma.ui.postMessage({ type: 'context-update', contextNonce: nonce, context: { ...context, revision: context.revision + 1, resources: { state: 'limited', message: String(error) } } });
+        publish({resources:{state:'limited',message:String(error)}});
       });
     }
   } catch (error) {
-    figma.ui.postMessage({ type: 'context-update', contextNonce, context: { fileKey: figma.fileKey, pageId: figma.currentPage?.id ?? '', selection: [], target: null, needsSelection: true, revision: generation * 2, error: String(error), capturedAt: Date.now() } });
+    figma.ui.postMessage({ type: 'context-update', contextNonce, context: { fileKey: figma.fileKey, pageId: figma.currentPage?.id ?? '', selection: [], target: null, needsSelection: true, revision: generation * 4, error: String(error), capturedAt: Date.now() } });
   }
 }
 if (typeof figma.on === 'function') {
