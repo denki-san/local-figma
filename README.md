@@ -32,7 +32,7 @@ figma-local help
 - Design to Code / Code to Design：针对给定页面逐页实现、对照与修正；当前没有通用自动双向同步。
 - 交互原型：建立简单点击跳转，并在 Figma 中检查实际路径。
 
-`inspect`、`preview`、`run`、`result`、`diff`、`validate`、`history`、`doctor` 等命令用于限定目标、执行及留存证据。完整命令以 `figma-local help` 为准。[场景指南](docs/workflows.md)、[输出协议](docs/protocol.md)与[读取覆盖](docs/inspect-coverage.md)供 Agent 和开发者查阅。
+`inspect`、`preview`、`run`、`result`、`diff`、`validate`、`history`、`doctor` 等命令用于限定目标、执行及留存证据。完整命令以 `figma-local help` 为准。[五种任务提示](docs/first-task.md)、[输出协议](docs/protocol.md)与[读取覆盖](docs/inspect-coverage.md)供 Agent 和开发者查阅。
 
 ## 当前限制
 
