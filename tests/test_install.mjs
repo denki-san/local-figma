@@ -18,7 +18,7 @@ test('实际安装包只含运行资源，离线安装后 CLI 与插件可用', 
   const packed = await exec(npm, ['pack', '--json', '--ignore-scripts', '--offline', '--cache', cache, '--pack-destination', temp], { cwd: repository });
   const pack = JSON.parse(packed.stdout)[0];
   const files = pack.files.map(file => file.path);
-  for (const file of ['LICENSE', 'README.md', 'SECURITY.md', 'CONTRIBUTING.md', 'plugin/main.js', 'plugin/ui.html', 'src/evidence.mjs', 'assets/preview.png', 'docs/quickstart.md', 'docs/first-task.md']) {
+  for (const file of ['LICENSE', 'README.md', 'SECURITY.md', 'CONTRIBUTING.md', 'plugin/main.js', 'plugin/ui.html', 'src/evidence.mjs', 'assets/preview.png', 'assets/usage-flow.png', 'docs/quickstart.md', 'docs/first-task.md', 'docs/agent-quickstart.md']) {
     assert(files.includes(file), `安装包缺少 ${file}`);
   }
   assert(files.every(file => !/^(examples|macos|tests|\.figma-agent|\.learnings)\//.test(file)));
@@ -63,4 +63,6 @@ test('实际安装包只含运行资源，离线安装后 CLI 与插件可用', 
   }
   const preview = await fs.readFile(path.join(installed, 'assets/preview.png'));
   assert.deepEqual([...preview.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  const usageFlow = await fs.readFile(path.join(installed, 'assets/usage-flow.png'));
+  assert.deepEqual([...usageFlow.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 });
