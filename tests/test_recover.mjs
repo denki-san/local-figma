@@ -37,7 +37,7 @@ test('确认旧进程退出后保留任务证据、归档锁、清除凭证并�
   await fs.writeFile(path.join(dir, 'plugin/ui.html'), '测试凭证');
   const id = '12345678-1234-1234-1234-123456789012';
   const runDir = path.join(dir, 'runs', id);
-  const original = { id, state: 'running', operation: 'run' };
+  const original = { id, state: 'running', operation: 'run', bindingId: (await json(path.join(dir, 'binding.json'))).id };
   await save(path.join(runDir, 'job.json'), original);
   await save(path.join(runDir, 'before.json'), { id, before: { id: '1:2' } });
   const output = await recover(cwd);

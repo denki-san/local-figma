@@ -43,13 +43,14 @@ test('固定插件跨服务重启保留配对，旧插件可回传结果且操�
   assert.equal((await call('/job', nextSession.token, { operation: 'inspect' })).status, 202);
 });
 
-for (const missing of [false, true]) test(`原插件丢失后核验原目标${missing ? '缺失' : '存在'}，结束等待才恢复写入且不重放`, async t => {
+for (const persistentPlugin of [true, false]) for (const missing of [false, true]) test(`${persistentPlugin ? '持久' : '普通'}连接恢复后核验原目标${missing ? '缺失' : '存在'}，结束等待才恢复写入且不重放`, async t => {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_reviewed_recovery_'));
   await init(cwd, 'https://figma.com/design/abc/Test?node-id=1-2');
-  let server = await start(cwd, 0, { persistentPlugin: true });
+  let server = await start(cwd, 0, { persistentPlugin });
   t.after(async () => { await server.close(); await fs.rm(cwd, { recursive: true, force: true }); });
   const dir = path.join(cwd, '.figma-agent');
-  const plugin = (await json(path.join(dir, 'pairing.json'))).token;
+  const pluginToken = async () => JSON.parse((await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8')).match(/const config = (.*);/)[1]).token;
+  let plugin = await pluginToken();
   let cli = (await json(path.join(dir, 'session.json'))).token;
   const call = async (route, token, data) => {
     const response = await fetch(`http://127.0.0.1:${server.port}${route}`, { method: data ? 'POST' : 'GET', headers: { 'X-Session-Token': token }, body: data ? JSON.stringify(data) : undefined });
@@ -58,14 +59,14 @@ for (const missing of [false, true]) test(`原插件丢失后核验原目标${mi
   await call('/poll?client=old', plugin);
   const old = (await call('/job', cli, { operation: 'run', targetNodeId: '1:3', code: 'return 1;' })).body;
   await call('/poll?client=old', plugin);
-  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  await server.close(); server = await start(cwd, 0, { persistentPlugin }); plugin = await pluginToken();
   cli = (await json(path.join(dir, 'session.json'))).token;
   assert.equal((await call('/poll?client=new', plugin)).body, null);
   assert.deepEqual((await call('/status', cli)).body.unresolved, [old.id]);
   assert.equal((await call('/job', cli, { operation: 'run', code: 'return 2;' })).status, 409);
   const stale = (await call('/job', cli, { operation: 'inspect', targetNodeId: '1:3' })).body;
   await call('/poll?client=new', plugin);
-  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  await server.close(); server = await start(cwd, 0, { persistentPlugin }); plugin = await pluginToken();
   cli = (await json(path.join(dir, 'session.json'))).token;
   await call('/poll?client=new', plugin);
   await call('/complete', plugin, { id: stale.id, ok: true, output: { id: '1:3' }, bindingVerified: { fileKey: 'abc', nodeId: '1:3' } });
@@ -86,7 +87,7 @@ for (const missing of [false, true]) test(`原插件丢失后核验原目标${mi
   assert.equal((await call('/resolve', cli, resolve)).status, 200);
   assert.deepEqual((await call('/status', cli)).body.unresolved, []);
   await assert.rejects(fs.access(path.join(dir, 'runs', old.id, 'result.json')));
-  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  await server.close(); server = await start(cwd, 0, { persistentPlugin }); plugin = await pluginToken();
   cli = (await json(path.join(dir, 'session.json'))).token;
   assert.equal((await call('/poll?client=third', plugin)).body, null);
   assert.deepEqual((await call('/status', cli)).body.unresolved, []);

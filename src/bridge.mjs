@@ -210,10 +210,10 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
   try {
     if (connectionOptions.persistentPlugin) {
       tokens.plugin = await pairingToken(dir);
-      for (const job of await unfinishedOperations(dir, binding.id)) {
-        jobs.set(job.id, job);
-        unresolved.add(job.id);
-      }
+    }
+    for (const job of await unfinishedOperations(dir, binding.id)) {
+      jobs.set(job.id, job);
+      unresolved.add(job.id);
     }
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
     port = server.address().port;
