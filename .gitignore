@@ -1,0 +1,12 @@
+.figma-agent/
+.learnings/
+.worktrees/
+node_modules/
+*.tgz
+.DS_Store
+/test_release/
+/docs/test-*.md
+/docs/test_*.md
+*.app/
+*.dmg
+*.pkg

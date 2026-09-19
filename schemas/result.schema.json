@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "当前 Alpha 持久化执行结果",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "ok",
+    "finishedAt"
+  ],
+  "properties": {
+    "undoBoundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after"],
+      "properties": {
+        "before": { "enum": ["not-run", "committed", "failed"] },
+        "after": { "enum": ["not-run", "committed", "failed"] }
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "finishedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+    },
+    "output": {},
+    "before": {
+      "$ref": "#/$defs/tree"
+    },
+    "after": {
+      "$ref": "#/$defs/tree"
+    },
+    "bindingVerified": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileKey",
+        "pageId",
+        "nodeId"
+      ],
+      "properties": {
+        "fileKey": {
+          "type": "string"
+        },
+        "pageId": {
+          "type": "string"
+        },
+        "nodeId": {
+          "type": "string"
+        }
+      }
+    },
+    "preview": {
+      "const": "preview.png"
+    },
+    "visualReview": {
+      "const": "not-run"
+    },
+    "interactionReview": {
+      "const": "not-run"
+    },
+    "error": {
+      "type": "string"
+    },
+    "executionStarted": {
+      "type": "boolean"
+    },
+    "recovery": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "tree": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tree"
+          }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error",
+          "executionStarted",
+          "recovery"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "bindingVerified",
+          "before"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "preview"
+            ]
+          },
+          {
+            "required": [
+              "output",
+              "after",
+              "visualReview",
+              "interactionReview"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

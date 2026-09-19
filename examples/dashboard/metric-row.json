@@ -1,0 +1,24 @@
+{
+  "format": "public-metric-row-v1",
+  "width": 1160,
+  "height": 142,
+  "background": "rgb(247, 249, 252)",
+  "card": {
+    "width": 278,
+    "height": 142,
+    "background": "rgb(255, 255, 255)",
+    "radius": "10px",
+    "shadow": "rgb(229, 232, 239) 0px 0px 0px 1px inset",
+    "texts": [
+      {"x":21,"y":17,"width":238,"height":20,"font":"\"PingFang SC\", sans-serif","size":"13px","weight":"400","lineHeight":"20px","color":"rgb(102, 112, 133)"},
+      {"x":21,"y":43,"width":238,"height":45,"font":"\"PingFang SC\", sans-serif","size":"30px","weight":"600","lineHeight":"45px","color":"rgb(29, 33, 41)"},
+      {"x":21,"y":94,"width":238,"height":18,"font":"\"PingFang SC\", sans-serif","size":"12px","weight":"400","lineHeight":"18px","color":"rgb(102, 112, 133)"}
+    ]
+  },
+  "items": [
+    {"x":0,"y":0,"texts":["完成任务","1,248","较上期增加 12.5%"]},
+    {"x":294,"y":0,"texts":["成功率","98.6%","较上期提升 0.8 个百分点"]},
+    {"x":588,"y":0,"texts":["平均耗时","2.4 分钟","较上期缩短 0.3 分钟"]},
+    {"x":882,"y":0,"texts":["待处理","6","需要你检查的异常任务"]}
+  ]
+}

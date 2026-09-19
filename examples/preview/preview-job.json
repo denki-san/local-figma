@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "jobId": "job-preview-example",
+  "runId": "run-preview-example",
+  "bindingId": "main-screen",
+  "createdAt": "2026-09-17T03:00:00Z",
+  "operation": "preview",
+  "target": {
+    "fileKey": "replace-locally",
+    "fileName": "Sample UI",
+    "pageId": "1:1",
+    "pageName": "Main",
+    "nodeIds": ["2:1"],
+    "preconditionHash": "replace-with-current-hash"
+  },
+  "capabilities": ["read", "export"],
+  "risk": {
+    "level": "low",
+    "reasons": [],
+    "confirmationRequired": false
+  },
+  "options": {
+    "allowDelete": false,
+    "fullText": false,
+    "previewScale": 2
+  },
+  "timeoutMs": 30000
+}

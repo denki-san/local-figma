@@ -1,0 +1,18 @@
+{
+  "mode": "design",
+  "objective": "设计资料收藏工具的桌面首页，让用户快速找到最近保存的资料。完成标准：主要搜索入口清晰、来源与标题易辨认、主要操作可点击。",
+  "audience": "每天保存少量网页资料并定期回查的个人用户。",
+  "primaryTask": "通过搜索或最近保存列表找到一条资料，进入详情。",
+  "targetSize": "桌面 1440×1000；主要内容保持合理行长，列表允许独立滚动。",
+  "sourceContent": "全部使用合成内容。页面标题：资料库；搜索提示：搜索标题、来源或标签；按钮：保存资料。示例资料：设计评审清单、阅读笔记、季度研究汇总。来源分别为个人笔记、研究站点、团队文档。状态包括空列表、超长标题、加载失败。",
+  "editScope": "仅授权空白 Frame 的子树；先做搜索区与一张资料卡，通过评审后扩展主页面。",
+  "preservationNotes": "保留目标 Frame 身份、其他页面和已有组件定义；本案例不修改全局变量。",
+  "protectedRegions": [],
+  "designSystem": [],
+  "references": [],
+  "visualDirection": "安静、清晰的阅读工具；中性底色、低密度排版、单一强调色。请先比较搜索优先和列表浏览优先两种结构，再由使用者选择。",
+  "designFoundations": "",
+  "stateCoverage": "长标题使用完整合成句扩展到三行；空态解释如何保存第一条资料；错误态提供重试。主路径为首页搜索或选择资料、进入详情、返回原来源。滚动检查首屏、中部和尾部。",
+  "acceptedDirection": null,
+  "review": { "typography": false, "overlap": false, "hierarchy": false, "content": false, "interaction": false }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/figma-agent/validation.schema.json",
+  "title": "Figma Agent Validation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "status", "checks", "evidenceLevel"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "string" },
+    "status": { "enum": ["passed", "failed", "needs-review"] },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ruleId", "status", "message"],
+        "properties": {
+          "ruleId": { "type": "string" },
+          "status": { "enum": ["passed", "failed", "warning", "skipped"] },
+          "message": { "type": "string" },
+          "nodeIds": { "type": "array", "items": { "type": "string" } },
+          "observed": {},
+          "expected": {},
+          "artifactPath": { "type": "string" }
+        }
+      }
+    },
+    "evidenceLevel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding", "scriptArtifact", "structuredResultArtifact", "execution", "readback", "visual", "interaction", "userAcceptance"],
+      "properties": {
+        "binding": { "$ref": "#/$defs/state" },
+        "scriptArtifact": { "$ref": "#/$defs/state" },
+        "structuredResultArtifact": { "$ref": "#/$defs/state" },
+        "execution": { "$ref": "#/$defs/state" },
+        "readback": { "$ref": "#/$defs/state" },
+        "visual": { "$ref": "#/$defs/state" },
+        "interaction": { "$ref": "#/$defs/state" },
+        "userAcceptance": { "$ref": "#/$defs/state" }
+      }
+    },
+    "remainingChecks": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "state": { "enum": ["passed", "failed", "not-run", "not-applicable", "unknown"] }
+  }
+}

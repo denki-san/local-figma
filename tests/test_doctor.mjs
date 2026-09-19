@@ -1,0 +1,57 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { init, json, save } from '../src/project.mjs';
+import { start } from '../src/bridge.mjs';
+import { doctor } from '../src/doctor.mjs';
+
+test('doctor 区分未初始化、未启动与损坏配置且不修改文件', async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_figma_doctor_'));
+  t.after(() => fs.rm(cwd, { recursive: true, force: true }));
+  assert.equal((await doctor(cwd)).checks.find(c => c.code === 'BINDING').status, 'error');
+  await init(cwd, 'https://figma.com/design/example/Test?node-id=1-2');
+  assert.equal((await doctor(cwd)).checks.find(c => c.code === 'SESSION').status, 'error');
+  const sessionFile = path.join(cwd, '.figma-agent/session.json');
+  await save(sessionFile, { port: '错误', token: '秘密' });
+  const result = await doctor(cwd);
+  assert.equal(result.ready, false);
+  assert.equal(JSON.stringify(result).includes('秘密'), false);
+  assert.equal((await json(sessionFile)).token, '秘密');
+});
+
+test('doctor 实时验证连接、会话身份、认证和忙碌状态', async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_figma_doctor_live_'));
+  t.after(() => fs.rm(cwd, { recursive: true, force: true }));
+  await init(cwd, 'https://figma.com/design/example/Test?node-id=1-2');
+  const bridge = await start(cwd, 0);
+  let closed = false;
+  t.after(async () => { if (!closed) await bridge.close(); });
+  const dir = path.join(cwd, '.figma-agent');
+  const session = await json(path.join(dir, 'session.json'));
+  const ui = await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8');
+  const plugin = JSON.parse(ui.match(/const config = (.*);/)[1]);
+  let report = await doctor(cwd);
+  assert.equal(report.ready, false);
+  assert.equal(report.checks.find(c => c.code === 'BRIDGE').status, 'ok');
+  assert.equal(report.checks.find(c => c.code === 'PLUGIN_CONNECTION').status, 'error');
+  await fetch(`http://127.0.0.1:${bridge.port}/poll?client=test`, { headers: { 'X-Session-Token': plugin.token } });
+  report = await doctor(cwd);
+  assert.equal(report.ready, true);
+  assert.equal(report.checks.find(c => c.code === 'PLUGIN_ID').status, 'warning');
+  assert.equal(JSON.stringify(report).includes(session.token), false);
+  assert.equal(JSON.stringify(report).includes(plugin.token), false);
+  await save(path.join(dir, 'session.json'), { ...session, sessionId: '错误会话' });
+  assert.equal((await doctor(cwd)).checks.find(c => c.code === 'BRIDGE_IDENTITY').status, 'error');
+  await save(path.join(dir, 'session.json'), { ...session, token: '0'.repeat(64) });
+  assert.equal((await doctor(cwd)).checks.find(c => c.code === 'BRIDGE_AUTH').status, 'error');
+  await save(path.join(dir, 'session.json'), session);
+  await fetch(`http://127.0.0.1:${bridge.port}/job`, { method: 'POST', headers: { 'X-Session-Token': session.token }, body: JSON.stringify({ operation: 'inspect' }) });
+  report = await doctor(cwd);
+  assert.equal(report.ready, false);
+  assert.equal(report.checks.find(c => c.code === 'ACTIVE_JOB').status, 'error');
+  await bridge.close(); closed = true;
+  await save(path.join(dir, 'session.json'), session);
+  assert.equal((await doctor(cwd)).checks.find(c => c.code === 'BRIDGE_UNREACHABLE').status, 'error');
+});

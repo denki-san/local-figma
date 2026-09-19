@@ -1,0 +1,141 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>body{font:14px system-ui;padding:16px;color:#222}small{color:#666}</style>
+<h3>Figma Local Runtime</h3><p id="state" role="status" aria-live="polite">正在重连</p><p id="state-detail">正在建立本机连接。</p><button id="hide-panel">隐藏面板</button><p><small>隐藏后继续连接。关闭插件会结束当前连接。</small></p>
+<section id="approval" hidden><h4>高风险脚本确认</h4><pre id="approval-details" style="white-space:pre-wrap;max-height:180px;overflow:auto"></pre><button id="approve">允许本次脚本</button><button id="reject">拒绝</button></section>
+<script>
+const config = SESSION_CONFIG;
+const client = Math.random().toString(36).slice(2) + Date.now();
+const headers = { 'Content-Type': 'application/json', 'X-Session-Token': config.token };
+document.getElementById('hide-panel').onclick = () => parent.postMessage({ pluginMessage: { type: 'hide-ui' } }, '*');
+let pending = null, busy = false, polling = false, activeId = null;
+let channelNonce = null;
+let contextNonce = null, pendingContext = null;
+let activeOperation = null;
+let lastFailure = null;
+function showState(label, detail) {
+  document.getElementById('state').textContent = label;
+  document.getElementById('state-detail').textContent = detail;
+}
+function connectionError(message, response) {
+  const error = Error(message);
+  error.needsAction = [401,403,409,413].includes(response?.status);
+  return error;
+}
+function describeConnectionError(error) {
+  if (error?.name === 'TimeoutError' || /signal timed out|timed? ?out|timeout/i.test(error?.message || '')) return '本机连接超时，正在自动重试。';
+  if (/failed to fetch|networkerror|load failed/i.test(error?.message || '')) return '暂时无法连接本机服务，正在自动重试。';
+  return error?.message || '本机连接暂时不可用，正在自动重试。';
+}
+function showCurrentState() {
+  if (review) showState('需要你处理', '请确认或拒绝本次脚本；五分钟后失效。');
+  else if (lastFailure) showState('需要你处理', lastFailure + '；请让 Agent 检查结果，勿重复执行。');
+  else if (busy) showState('执行中', pending ? '正在保存结果，请保持插件运行。' : '任务正在处理，隐藏面板后仍会继续。');
+  else showState('已连接', '可以让 Agent 继续操作当前文件。');
+}
+const maxResultBytes = 16 * 1024 * 1024 - 1024;
+const fitsResult = value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxResultBytes;
+function compactFailure(message, minimal = false) {
+  const result = { id: message.id, ok: false,
+    error: '结果超过回传大小限制，已省略大字段；执行状态请结合修改前快照和独立读回核验',
+    executionStarted: typeof message.executionStarted === 'boolean' ? message.executionStarted : activeOperation === 'run',
+    recovery: '保留已有证据，缩小目标后独立 inspect；禁止重放脚本' };
+  for (const field of ['bindingVerified', 'undoBoundaries']) if (message[field] !== undefined) result[field] = message[field];
+  if (!minimal) for (const field of ['after', 'before']) {
+    if (message[field] === undefined) continue;
+    result[field] = message[field];
+    if (!fitsResult(result)) delete result[field];
+  }
+  return result;
+}
+let review = null, deciding = false;
+const request = (route, options = {}) => fetch('http://localhost:' + config.port + route, { ...options, headers, signal: AbortSignal.timeout(3000) });
+async function decide(approved) {
+  if (!review || deciding) return;
+  deciding = true;
+  const current = review;
+  try {
+    const response = await request('/approve', { method: 'POST', body: JSON.stringify({ id: current.id, scriptHash: current.scriptHash, approved }) });
+    if (!response.ok) throw Error('确认尚未保存，请检查终端并重试同一决定');
+    const decision = await response.json();
+    review = null; document.getElementById('approval').hidden = true;
+    parent.postMessage({ pluginMessage: { type: 'approval-ack', id: current.id, channelNonce, approved: decision.approved === true } }, '*');
+    showCurrentState();
+  } catch (error) { showState('需要你处理', error.message); }
+  finally { deciding = false; }
+}
+document.getElementById('approve').onclick = () => decide(true);
+document.getElementById('reject').onclick = () => decide(false);
+window.onmessage = async event => {
+  // 桌面宿主的消息来源对象可能不同于 parent；用每任务随机凭证核验回传。
+  let message = event.data?.pluginMessage;
+  if (message?.type === 'serialized-result') {
+    if (!channelNonce || message.channelNonce !== channelNonce || message.id !== activeId || typeof message.serialized !== 'string') return;
+    try { message = JSON.parse(message.serialized); }
+    catch { pending = { id: activeId, ok: false, executionStarted: activeOperation === 'run', error: '结果无法解析，请检查当前画布，禁止重放' }; return; }
+  }
+  if (contextNonce && message?.type === 'context-update' && message.contextNonce === contextNonce) {
+    pendingContext = message.context;
+    return;
+  }
+  if (!channelNonce || message?.channelNonce !== channelNonce || message.id !== activeId) return;
+  if (message?.type === 'approval-request' && message.id === activeId) {
+    review = message;
+    document.getElementById('approval-details').textContent = `原因：${message.reason}\n文件：${message.binding.fileKey}\n节点：${message.binding.nodeId}\n脚本 hash：${message.scriptHash}\n\n${message.code}`;
+    document.getElementById('approval').hidden = false;
+    showCurrentState();
+    return;
+  }
+  if (message?.type === 'checkpoint' && message.id === activeId) {
+    let ok = false;
+    try {
+      const response = await request('/checkpoint', { method: 'POST', body: JSON.stringify(message) });
+      ok = response.ok && (await response.json()).saved === true;
+    } catch {}
+    parent.postMessage({ pluginMessage: { type: 'checkpoint-ack', id: message.id, channelNonce, ok } }, '*');
+    return;
+  }
+  if (message && message.id === activeId && typeof message.ok === 'boolean' && !pending) {
+    const { channelNonce: omitted, ...result } = message;
+    pending = fitsResult(result) ? result : compactFailure(result);
+    review = null; document.getElementById('approval').hidden = true;
+  }
+};
+setInterval(async () => {
+  if (polling) return;
+  polling = true;
+  try {
+    if (busy) {
+      const heartbeat = await request('/heartbeat?client=' + client);
+      if (!heartbeat.ok) throw connectionError('心跳失败，请检查桥接；保留当前任务，禁止重放', heartbeat);
+    }
+    if (pending) {
+      const response = await request('/complete', { method: 'POST', body: JSON.stringify(pending) });
+      if (response.status === 413) {
+        pending = compactFailure(pending, true);
+        throw connectionError('结果体积被拒绝；保留任务，下轮保存精简失败证据，禁止重放', response);
+      }
+      if (!response.ok) throw connectionError('结果未被保存，请保持插件运行并让 Agent 检查', response);
+      if (!pending.ok) lastFailure = pending.error || '本次任务未完成';
+      pending = null; busy = false; activeId = null; channelNonce = null; activeOperation = null;
+    }
+    if (!busy) {
+      // getRandomValues 可用于桌面插件的非安全 iframe；在领取任务前生成凭证。
+      const nextNonce = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+      const response = await request('/poll?client=' + client);
+      if (!response.ok) throw connectionError('连接尚未恢复，请让 Agent 检查本机服务；保留当前任务', response);
+      const job = await response.json();
+      if (!contextNonce) {
+        contextNonce = nextNonce;
+        parent.postMessage({ pluginMessage: { type: 'context-request', contextNonce } }, '*');
+      }
+      if (job) { lastFailure = null; busy = true; activeId = job.id; activeOperation = job.operation; channelNonce = nextNonce; parent.postMessage({ pluginMessage: { ...job, channelNonce } }, '*'); }
+    }
+    if (pendingContext) {
+      const current = pendingContext;
+      const response = await request('/context', { method: 'POST', body: JSON.stringify({ client, context: current }) });
+      if (response.ok && pendingContext === current) pendingContext = null;
+    }
+    showCurrentState();
+  } catch (error) { showState(error.needsAction ? '需要你处理' : '正在重连', '已有任务不会重新执行。' + describeConnectionError(error)); }
+  finally { polling = false; }
+}, 750);
+</script></html>

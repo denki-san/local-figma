@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/figma-agent/job.schema.json",
+  "title": "规划草案：Figma Agent Job",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "jobId",
+    "runId",
+    "bindingId",
+    "createdAt",
+    "operation",
+    "target",
+    "capabilities",
+    "risk",
+    "timeoutMs"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "jobId": {
+      "type": "string",
+      "minLength": 8
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 8
+    },
+    "bindingId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "operation": {
+      "enum": [
+        "bind",
+        "inspect",
+        "run",
+        "preview",
+        "snapshot",
+        "diff",
+        "validate",
+        "rollback"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileKey",
+        "fileName",
+        "pageId",
+        "pageName"
+      ],
+      "properties": {
+        "fileKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fileName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pageName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "preconditionHash": {
+          "type": "string"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "read",
+          "write",
+          "delete",
+          "prototype",
+          "variables",
+          "export"
+        ]
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "reasons",
+        "confirmationRequired"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confirmationRequired": {
+          "type": "boolean"
+        },
+        "confirmation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "confirmedBy",
+            "confirmedAt"
+          ],
+          "properties": {
+            "confirmedBy": {
+              "const": "user"
+            },
+            "confirmedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "scopeHash": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowDelete": {
+          "type": "boolean",
+          "default": false
+        },
+        "fullText": {
+          "type": "boolean",
+          "default": false
+        },
+        "previewScale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4
+        }
+      }
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 300000
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "run"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "script"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "risk": {
+            "properties": {
+              "level": {
+                "const": "high"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "risk": {
+            "required": [
+              "confirmation"
+            ],
+            "properties": {
+              "confirmationRequired": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "risk": {
+            "properties": {
+              "confirmationRequired": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "capabilities": {
+            "contains": {
+              "const": "delete"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "options": {
+            "required": [
+              "allowDelete"
+            ],
+            "properties": {
+              "allowDelete": {
+                "const": true
+              }
+            }
+          },
+          "risk": {
+            "properties": {
+              "level": {
+                "const": "high"
+              }
+            }
+          }
+        },
+        "required": [
+          "options"
+        ]
+      }
+    }
+  ]
+}

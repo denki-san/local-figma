@@ -1,0 +1,11 @@
+{
+  "name": "figma-local-runtime",
+  "version": "0.1.0-alpha.1",
+  "description": "面向 Agent 的本地 Figma 编辑运行时",
+  "type": "module",
+  "bin": { "figma-local": "bin/figma-local.mjs" },
+  "engines": { "node": ">=22" },
+  "files": ["bin/", "src/", "plugin/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "schemas/", "examples/", "README.md", "SECURITY.md", "CONTRIBUTING.md"],
+  "scripts": { "test": "node --test tests/test_*.mjs", "check": "node --check bin/figma-local.mjs && node --check plugin/main.js" },
+  "devDependencies": { "ajv": "8.20.0" }
+}

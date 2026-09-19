@@ -1,0 +1,47 @@
+# 贡献指南
+
+当前项目处于 Alpha 实现与验收阶段。欢迎针对协议、schema、安全边界、验证规则和真实 Figma 失败样本提出贡献。
+
+开发前执行 `npm ci`，再执行 `npm run check` 和 `npm test`。Ajv 仅用于开发期合同测试；安装后的 CLI 保持零运行时依赖。
+
+## 贡献原则
+
+- 每项结论标注 `Validated`、`Hypothesis`、`Decided` 或 `Decision needed`。
+- 修改范围保持小而可审阅。
+- 不提交真实 file key、页面 ID、用户设计内容、临时 token 或 session 文件。
+- 不执行来源不明的 Figma 脚本。
+- 代码注释使用简体中文；技术名词可以保留英文。
+- 临时测试脚本、测试文档和测试日志使用 `test_` 前缀。
+- `.figma-agent/` 默认保存本地 binding 与 evidence，并由 `.gitignore` 排除；只提交经过用户主动选择的脱敏证据。
+
+## 提交内容
+
+一个贡献应包含：
+
+1. 要解决的问题与证据。
+2. 影响的协议、schema 或行为。
+3. 新增或更新的测试场景。
+4. 安全与兼容性影响。
+5. 尚未验证的部分。
+
+## 设计变更
+
+涉及以下内容时先增加 ADR：
+
+- localhost 协议与认证。
+- arbitrary JavaScript 执行模型。
+- transaction、Undo 与 rollback 语义。
+- context schema 的破坏性变更。
+- 远程服务、遥测或账号系统。
+- 许可证与商业化边界。
+
+## 验证层级
+
+实现完成不等于交付完成。报告应区分：
+
+- 单元测试。
+- bridge 回环集成测试。
+- Figma 文档写入与读回。
+- 截图视觉检查。
+- prototype 真实点击。
+- 用户验收。

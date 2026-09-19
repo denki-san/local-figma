@@ -1,0 +1,41 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { init, json } from '../src/project.mjs';
+import { start } from '../src/bridge.mjs';
+
+test('固定插件跨服务重启保留配对，旧插件可回传结果且操作不会重新交付', async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_fixed_plugin_'));
+  await init(cwd, 'https://figma.com/design/abc/Test?node-id=1-2');
+  let server = await start(cwd, 0, { persistentPlugin: true });
+  t.after(async () => { await server.close(); await fs.rm(cwd, { recursive: true, force: true }); });
+  const dir = path.join(cwd, '.figma-agent');
+  const uiPath = path.join(dir, 'plugin/ui.html');
+  const html = await fs.readFile(uiPath, 'utf8');
+  const plugin = JSON.parse(html.match(/const config = (.*);/)[1]);
+  const originalSession = await json(path.join(dir, 'session.json'));
+  const port = server.port;
+  const call = async (route, token = plugin.token, data) => {
+    const response = await fetch(`http://127.0.0.1:${port}${route}`, { method: data ? 'POST' : 'GET', headers: { 'X-Session-Token': token, 'Content-Type': 'application/json' }, body: data ? JSON.stringify(data) : undefined });
+    return { status: response.status, body: await response.json() };
+  };
+  await call('/poll?client=original');
+  const job = (await call('/job', originalSession.token, { operation: 'run', code: 'return 42;' })).body;
+  assert.equal((await call('/poll?client=original')).body.id, job.id);
+  await server.close();
+  assert.equal(await fs.readFile(uiPath, 'utf8'), html);
+  server = await start(cwd, port, { persistentPlugin: true });
+  const nextSession = await json(path.join(dir, 'session.json'));
+  assert.notEqual(nextSession.token, originalSession.token);
+  assert.equal(await fs.readFile(uiPath, 'utf8'), html);
+  assert.equal((await fs.stat(path.join(dir, 'pairing.json'))).mode & 0o777, 0o600);
+  assert.equal((await call('/status', originalSession.token)).status, 403);
+  assert.equal((await call('/poll?client=original')).body, null);
+  assert.equal((await call('/job', nextSession.token, { operation: 'inspect' })).status, 409);
+  assert.equal((await call('/complete', plugin.token, { id: job.id, ok: true, output: 42 })).status, 200);
+  assert.equal((await call('/complete', plugin.token, { id: job.id, ok: true, output: 99 })).status, 200);
+  assert.equal((await call('/result?id=' + job.id, nextSession.token)).body.output, 42);
+  assert.equal((await call('/job', nextSession.token, { operation: 'inspect' })).status, 202);
+});
