@@ -6,7 +6,10 @@ export function selectedInstanceProperty(state, property, value) {
   if (typeof property!=='string'||!property.trim()||property.length>300||typeof value!=='string'||value.length>10000) throw Error('需要完整属性名和有效属性值');
   return {operation:'run',targetNodeId:selection[0].id,code:`
 const property=${JSON.stringify(property)},raw=${JSON.stringify(value)},pageId=${JSON.stringify(state.context.pageId)};
+const ancestorIds=()=>{const ids=[];for(let n=target;n;n=n.parent)ids.push(n.id);return JSON.stringify(ids);};
+const originalAncestors=ancestorIds();
 function check(){
+ if(ancestorIds()!==originalAncestors)throw Error('祖先范围已变化，本次未修改');
  if(target.removed||target.type!=='INSTANCE'||figma.currentPage.id!==pageId||figma.currentPage.selection.length!==1||figma.currentPage.selection[0].id!==target.id)throw Error('选择已变化，本次未修改');
  for(let n=target;n&&n.type!=='PAGE';n=n.parent){
   if(n.locked||n.visible===false)throw Error('实例或祖先已锁定或隐藏');

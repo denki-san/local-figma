@@ -34,7 +34,8 @@ test('受保护范围、变量绑定和异步变化均在写入前拒绝',async(
     f=>{f.target.locked=true;},f=>{f.target.parent={type:'FRAME',layoutMode:'VERTICAL',parent:f.page};},
     f=>{f.props['标题#1'].boundVariables={value:{type:'VARIABLE_ALIAS',id:'v'}};},
     f=>{f.figma.loadFontAsync=async()=>{f.page.selection=[];};},
-    f=>{f.figma.loadFontAsync=async()=>{f.props['显示#2'].value=false;};}
+    f=>{f.figma.loadFontAsync=async()=>{f.props['显示#2'].value=false;};},
+    f=>{f.target.parent={id:'1:10',type:'FRAME',layoutMode:'NONE',parent:f.page};f.figma.loadFontAsync=async()=>{f.target.parent.parent={id:'1:11',type:'FRAME',parent:f.page};};}
   ]){const f=fixture();change(f);await assert.rejects(f.run());assert.equal(f.writes(),0);}
   const f=fixture();await assert.rejects(f.run('显示#2','yes'));assert.equal(f.writes(),0);
 });

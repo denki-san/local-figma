@@ -31,3 +31,8 @@ test('读回失败不重复写入',async()=>{
  const f=fixture();f.figma.variables.setBoundVariableForPaint=paint=>paint;
  await assert.rejects(f.run(),/读回不一致/);assert.equal(f.writes(),1);
 });
+test('等待期间父容器移出原祖先范围时拒绝写入',async()=>{
+ const f=fixture();f.target.parent={id:'1:10',type:'FRAME',parent:f.page};
+ f.figma.variables.getVariableByIdAsync=async()=>{f.target.parent.parent={id:'1:11',type:'FRAME',parent:f.page};return f.variable;};
+ await assert.rejects(f.run(),/变化/);assert.equal(f.writes(),0);
+});

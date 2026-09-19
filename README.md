@@ -11,7 +11,7 @@ CLI、本机桥接和 Development Plugin 连接成一个编辑循环：理解当
 
 [快速开始](docs/quickstart.md) · [五场景验收](docs/scenario-acceptance.md) · [首版范围](docs/p0-scope.md) · [安全说明](SECURITY.md) · [贡献指南](CONTRIBUTING.md)
 
-> 当前为 `0.1.0-alpha.1` 本地开发版，尚未发布 npm。包名暂为 `figma-local-runtime`，命令为 `figma-local`。五场景验收、稳定性与公开分发审查正在进行；下表区分产品目标和已验证能力。
+> 首个试用版本：`0.1.0-alpha.1`。通过 [GitHub Releases](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1) 分发，尚未发布 npm。包名为 `figma-local-runtime`，命令为 `figma-local`。本版提前开放试用，五场景完整达标与长期稳定性仍有未完成项，详见[发布说明](docs/releases/v0.1.0-alpha.1.md)。
 
 ![通过本地插件与CLI生成的原生Figma任务概览，全部为合成演示数据](examples/dashboard/preview.png)
 
@@ -44,9 +44,11 @@ Agent 负责检查依赖、绑定链接和准备连接。首次按提示在对�
 
 运行依赖为 Node.js 22+，由 Agent 检查和准备。当前安装测试覆盖 macOS；其他系统尚未验收。
 
-在源码目录执行：
+可由 Agent 下载 Release 中的 `.tgz` 并执行 `npm install -g <包路径>`，或从源码安装：
 
 ```sh
+git clone https://github.com/denki-san/local-figma.git
+cd local-figma
 npm install -g .
 ```
 

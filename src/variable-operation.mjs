@@ -7,7 +7,10 @@ export function selectedFillVariable(state, variableId) {
   if(typeof variableId!=='string'||!variableId.trim()||variableId.length>300)throw Error('Agent需要提供已确认的颜色变量ID');
   return {operation:'run',targetNodeId:selection[0].id,code:`
 const variableId=${JSON.stringify(variableId)},pageId=${JSON.stringify(state.context.pageId)};
+const ancestorIds=()=>{const ids=[];for(let n=target;n;n=n.parent)ids.push(n.id);return JSON.stringify(ids);};
+const originalAncestors=ancestorIds();
 function check(){
+ if(ancestorIds()!==originalAncestors)throw Error('祖先范围已变化，本次未修改');
  if(target.removed||figma.currentPage.id!==pageId||figma.currentPage.selection.length!==1||figma.currentPage.selection[0].id!==target.id)throw Error('选择已变化，本次未修改');
  for(let node=target;node&&node.type!=='PAGE';node=node.parent){
   if(node.locked||node.visible===false)throw Error('目标或祖先已锁定或隐藏');

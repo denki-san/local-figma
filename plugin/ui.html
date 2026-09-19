@@ -36,7 +36,7 @@ function describeConnectionError(error) {
 }
 function showCurrentState() {
   if (review) showState('需要你处理', '请确认或拒绝本次脚本；五分钟后失效。');
-  else if (lastFailure) showState('需要你处理', '本次任务需要 Agent 核查。请回到对话继续，勿重复执行。');
+  else if (lastFailure) showState('需要你处理', String(lastFailure).slice(0,200) + '；请回到 Agent 对话核查，勿重复执行。');
   else if (busy) showState('执行中', pending ? '正在保存结果，请保持插件运行。' : '任务正在处理，隐藏面板后仍会继续。');
   else if (targetIssue) showState('需要你处理', targetIssue);
   else showState('已连接', '可以让 Agent 继续操作当前文件。');
