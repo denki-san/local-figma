@@ -1,16 +1,19 @@
 import { isNodeId } from './node-id.mjs';
 const scoped = new Set(['inspect', 'preview', 'design-system', 'run']);
-const positional = new Set(['init', 'setup', 'text', 'fill', 'align', 'distribute', 'prototype', 'instance', 'guide', 'guide-check', 'result', 'wait', 'diff', 'validate', 'run']);
+const positional = new Set(['init', 'setup', 'text', 'fill', 'align', 'distribute', 'prototype', 'instance', 'props', 'bind-fill', 'guide', 'guide-check', 'result', 'wait', 'diff', 'validate', 'run']);
 
 export function parseArguments(values) {
   const [command = 'help', ...args] = values;
-  let arg, targetNodeId, timeoutSeconds;
+  let arg, targetNodeId, timeoutSeconds, propertyValue;
   const layoutValues = {};
   const fontValues = {};
   let risk = { level: 'normal' };
   for (let i = 0; i < args.length; i++) {
     const value = args[i];
-    if (['--family', '--style', '--size'].includes(value)) {
+    if (value === '--value') {
+      if(command!=='props'||propertyValue!==undefined||args[i+1]===undefined||args[i+1].startsWith('--'))throw Error('props需要唯一的--value属性值');
+      propertyValue=args[++i];
+    } else if (['--family', '--style', '--size'].includes(value)) {
       const key = value.slice(2), raw = args[++i];
       if (command !== 'font' || key in fontValues || !raw?.trim() || raw.startsWith('--')) throw Error('字体参数需要唯一的非空值');
       if (key === 'size' && !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw)) throw Error('字号需要有效数值');
@@ -35,5 +38,6 @@ export function parseArguments(values) {
   }
   if (command === 'layout' && !Object.keys(layoutValues).length) throw Error('layout 至少需要一个尺寸或间距参数');
   if (command === 'font' && (!Object.keys(fontValues).length || (fontValues.family === undefined) !== (fontValues.style === undefined))) throw Error('font 需要字号，或同时指定 family 与 style');
-  return { command, arg, risk, targetNodeId, timeoutSeconds, layoutValues, fontValues };
+  if(command==='props'&&(!arg?.trim()||propertyValue===undefined))throw Error('用法：props <完整属性名> --value <文字或true/false>');
+  return { command, arg, risk, targetNodeId, timeoutSeconds, layoutValues, fontValues, propertyValue };
 }

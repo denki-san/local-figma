@@ -14,11 +14,14 @@ import { scenarios } from '../src/scenarios.mjs';
 import { prepareManager, startManager, managerDirectory } from '../src/session-manager.mjs';
 import { selectedTextEdit, selectedLayoutEdit, selectedFillEdit, selectedFontEdit, selectedArrangeEdit, selectedPrototypeEdit } from '../src/operations.mjs';
 import { selectedInstanceCreate } from '../src/instance-operation.mjs';
+import { selectedInstanceProperty } from '../src/instance-properties.mjs';
+import { selectedFillVariable } from '../src/variable-operation.mjs';
 
 let cwd = process.cwd();
 const out = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
+const propertyHelp = ['props <完整属性名> --value <文字或true/false>', 'bind-fill <已确认的颜色变量ID>'];
 try {
-  const { command, arg, risk, targetNodeId, timeoutSeconds, layoutValues, fontValues } = parseArguments(process.argv.slice(2));
+  const { command, arg, risk, targetNodeId, timeoutSeconds, layoutValues, fontValues, propertyValue } = parseArguments(process.argv.slice(2));
   // 老项目保留显式本地绑定；普通工作目录自动使用固定会话。
   if (!['init', 'setup', 'serve', 'help'].includes(command)) {
     try { await fs.access(root(cwd)); }
@@ -28,7 +31,7 @@ try {
       catch (managerError) { if (managerError.code !== 'ENOENT') throw managerError; }
     }
   }
-  if (command === 'help') out({ commands: ['init <figma-url>', 'connect', 'doctor', 'recover', 'status', 'context', 'text <新文字>', 'fill <#RRGGBB>', 'font [--size <字号>] [--family <字体名> --style <样式名>]', 'align <left|right|top|bottom|horizontal-center|vertical-center>', 'distribute <horizontal|vertical>', 'prototype <同页目标Frame的ID>', 'instance <已确认的同页主组件ID>', 'layout [--width <宽>] [--height <高>] [--gap <间距>] [--padding <内边距>]', 'inspect [--node <ID>]', 'preview [--node <ID>]', 'design-system [--node <ID>]', 'run <script.js> [--node <ID>] [--high-risk <风险说明>]', 'result <job-id>', 'wait <job-id> [--timeout <秒>]', 'history', 'diff <job-id>', 'validate <job-id>', `guide <${Object.keys(scenarios).join('|')}>`, `guide-check <${Object.keys(scenarios).join('|')}>`], installation: 'Node.js 22+；init 后 connect，导入返回的 manifest 并运行插件', script: '可信 JavaScript 函数体，可访问 figma 与 target，并通过 return 返回结果' });
+  if (command === 'help') out({ commands: [...propertyHelp, 'init <figma-url>', 'connect', 'doctor', 'recover', 'status', 'context', 'text <新文字>', 'fill <#RRGGBB>', 'font [--size <字号>] [--family <字体名> --style <样式名>]', 'align <left|right|top|bottom|horizontal-center|vertical-center>', 'distribute <horizontal|vertical>', 'prototype <同页目标Frame的ID>', 'instance <已确认的同页主组件ID>', 'layout [--width <宽>] [--height <高>] [--gap <间距>] [--padding <内边距>]', 'inspect [--node <ID>]', 'preview [--node <ID>]', 'design-system [--node <ID>]', 'run <script.js> [--node <ID>] [--high-risk <风险说明>]', 'result <job-id>', 'wait <job-id> [--timeout <秒>]', 'history', 'diff <job-id>', 'validate <job-id>', `guide <${Object.keys(scenarios).join('|')}>`, `guide-check <${Object.keys(scenarios).join('|')}>`], installation: 'Node.js 22+；init 后 connect，导入返回的 manifest 并运行插件', script: '可信 JavaScript 函数体，可访问 figma 与 target，并通过 return 返回结果' });
   else if (command === 'init') out(await init(cwd, arg));
   else if (command === 'setup') out(await prepareManager(arg));
   else if (command === 'recover') out(await recover(cwd));
@@ -65,7 +68,7 @@ try {
     const stop = async () => { if (stopping) return; stopping = true; await bridge.close(); };
     process.once('SIGINT', stop); process.once('SIGTERM', stop);
   } else {
-    if (!['status', 'context', 'text', 'fill', 'font', 'layout', 'align', 'distribute', 'prototype', 'instance', 'inspect', 'preview', 'design-system', 'run'].includes(command)) throw Error('未知命令，请运行 figma-local help');
+    if (!['status', 'context', 'text', 'fill', 'font', 'layout', 'align', 'distribute', 'prototype', 'instance', 'props', 'bind-fill', 'inspect', 'preview', 'design-system', 'run'].includes(command)) throw Error('未知命令，请运行 figma-local help');
     let session;
     try { session = await json(path.join(root(cwd), 'session.json')); }
     catch (error) {
@@ -74,11 +77,11 @@ try {
     }
     const headers = { 'Content-Type': 'application/json', 'X-Session-Token': session.token };
     let endpoint = command === 'context' ? '/context' : '/status', options = { headers, signal: AbortSignal.timeout(10000) };
-    if (['text', 'fill', 'font', 'layout', 'align', 'distribute', 'prototype', 'instance'].includes(command)) {
+    if (['text', 'fill', 'font', 'layout', 'align', 'distribute', 'prototype', 'instance', 'props', 'bind-fill'].includes(command)) {
       const response = await fetch(`http://127.0.0.1:${session.port}/context`, options);
       if (!response.ok) throw Error('当前选择暂不可用，请检查连接');
       const state = await response.json();
-      const operation = command === 'instance' ? selectedInstanceCreate(state, arg) : command === 'prototype' ? selectedPrototypeEdit(state, arg) : ['align','distribute'].includes(command) ? selectedArrangeEdit(state, command, arg) : command === 'text' ? selectedTextEdit(state, arg) : command === 'fill' ? selectedFillEdit(state, arg) : command === 'font' ? selectedFontEdit(state, fontValues) : selectedLayoutEdit(state, layoutValues);
+      const operation = command === 'bind-fill' ? selectedFillVariable(state, arg) : command === 'props' ? selectedInstanceProperty(state, arg, propertyValue) : command === 'instance' ? selectedInstanceCreate(state, arg) : command === 'prototype' ? selectedPrototypeEdit(state, arg) : ['align','distribute'].includes(command) ? selectedArrangeEdit(state, command, arg) : command === 'text' ? selectedTextEdit(state, arg) : command === 'fill' ? selectedFillEdit(state, arg) : command === 'font' ? selectedFontEdit(state, fontValues) : selectedLayoutEdit(state, layoutValues);
       endpoint = '/job'; options.method = 'POST'; options.body = JSON.stringify(operation);
     }
     if (['inspect', 'preview', 'design-system', 'run'].includes(command)) {

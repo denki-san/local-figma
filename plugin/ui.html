@@ -1,6 +1,14 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>body{font:14px system-ui;padding:16px;color:#222}small{color:#666}</style>
-<h3>Figma Local Runtime</h3><p id="state" role="status" aria-live="polite">正在重连</p><p id="state-detail">正在建立本机连接。</p><button id="hide-panel">隐藏面板</button><p><small>隐藏后继续连接。关闭插件会结束当前连接。</small></p>
-<section id="approval" hidden><h4>高风险脚本确认</h4><pre id="approval-details" style="white-space:pre-wrap;max-height:180px;overflow:auto"></pre><button id="approve">允许本次脚本</button><button id="reject">拒绝</button></section>
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:20px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}h1{font-size:14px;margin:0;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;padding:6px 10px}button:active{transform:scale(.97)}button:focus-visible,summary:focus-visible{outline:2px solid #3478f6;outline-offset:3px}
+.target{border:1px solid var(--figma-color-border,#e5e5e5);border-radius:8px;padding:12px;margin-bottom:16px}.label,small{color:var(--figma-color-text-secondary,#737373)}.label{font-size:11px}.name{font-weight:600;margin:3px 0;overflow-wrap:anywhere}.selection{color:var(--figma-color-text-secondary,#737373);overflow-wrap:anywhere}
+#state{font-size:14px;font-weight:600;margin:0}#state-detail{margin:4px 0 16px;overflow-wrap:anywhere}footer{border-top:1px solid var(--figma-color-border,#e5e5e5);padding-top:12px}h2{font-size:13px}#approval{border-top:1px solid var(--figma-color-border,#ddd);margin-top:16px;padding-top:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:160px;overflow:auto;font:11px/1.5 ui-monospace,monospace}summary{cursor:pointer;margin-bottom:8px}#approve{background:#1769e0;color:#fff;border-color:#1769e0}
+</style>
+<header><h1>local-figma</h1><button id="hide-panel">隐藏面板</button></header>
+<section class="target" aria-label="当前目标"><div class="label">目标范围</div><div id="target-name" class="name">正在核对 Agent 绑定的目标…</div><div id="selection-name" class="selection">在目标范围内选择内容即可继续对话</div></section>
+<p id="state" role="status" aria-live="polite">正在重连</p><p id="state-detail">正在建立本机连接。</p>
+<footer><small>回到 Agent 对话描述需求，无需重复发送链接。<br>隐藏后继续连接；关闭插件会断开连接。</small></footer>
+<section id="approval" hidden><h2>需要确认本次修改</h2><p id="approval-reason"></p><details><summary>查看影响范围与脚本</summary><pre id="approval-details"></pre></details><button id="approve">允许本次修改</button> <button id="reject">取消本次修改</button></section>
 <script>
 const config = SESSION_CONFIG;
 const client = Math.random().toString(36).slice(2) + Date.now();
@@ -11,6 +19,7 @@ let channelNonce = null;
 let contextNonce = null, pendingContext = null;
 let activeOperation = null;
 let lastFailure = null;
+let targetIssue = null;
 function showState(label, detail) {
   document.getElementById('state').textContent = label;
   document.getElementById('state-detail').textContent = detail;
@@ -27,8 +36,9 @@ function describeConnectionError(error) {
 }
 function showCurrentState() {
   if (review) showState('需要你处理', '请确认或拒绝本次脚本；五分钟后失效。');
-  else if (lastFailure) showState('需要你处理', lastFailure + '；请让 Agent 检查结果，勿重复执行。');
+  else if (lastFailure) showState('需要你处理', '本次任务需要 Agent 核查。请回到对话继续，勿重复执行。');
   else if (busy) showState('执行中', pending ? '正在保存结果，请保持插件运行。' : '任务正在处理，隐藏面板后仍会继续。');
+  else if (targetIssue) showState('需要你处理', targetIssue);
   else showState('已连接', '可以让 Agent 继续操作当前文件。');
 }
 const maxResultBytes = 16 * 1024 * 1024 - 1024;
@@ -74,13 +84,22 @@ window.onmessage = async event => {
   }
   if (contextNonce && message?.type === 'context-update' && message.contextNonce === contextNonce) {
     pendingContext = message.context;
+    const selected = message.context?.selection || [];
+    document.getElementById('selection-name').textContent = selected.length === 1 ? '当前选中：' + selected[0].name : selected.length ? '当前选中 ' + selected.length + ' 项' : '尚未选择内容，可直接在对话中描述需求';
+    return;
+  }
+  if (contextNonce && message?.type === 'target-info' && message.contextNonce === contextNonce) {
+    document.getElementById('target-name').textContent = message.name || '目标暂不可用';
+    targetIssue = message.issue || null;
     return;
   }
   if (!channelNonce || message?.channelNonce !== channelNonce || message.id !== activeId) return;
   if (message?.type === 'approval-request' && message.id === activeId) {
     review = message;
+    document.getElementById('approval-reason').textContent = message.reason;
     document.getElementById('approval-details').textContent = `原因：${message.reason}\n文件：${message.binding.fileKey}\n节点：${message.binding.nodeId}\n脚本 hash：${message.scriptHash}\n\n${message.code}`;
     document.getElementById('approval').hidden = false;
+    document.getElementById('approval').scrollIntoView?.({block:'start'});
     showCurrentState();
     return;
   }
@@ -125,7 +144,7 @@ setInterval(async () => {
       const job = await response.json();
       if (!contextNonce) {
         contextNonce = nextNonce;
-        parent.postMessage({ pluginMessage: { type: 'context-request', contextNonce } }, '*');
+        parent.postMessage({ pluginMessage: { type: 'context-request', contextNonce, binding: config.binding } }, '*');
       }
       if (job) { lastFailure = null; busy = true; activeId = job.id; activeOperation = job.operation; channelNonce = nextNonce; parent.postMessage({ pluginMessage: { ...job, channelNonce } }, '*'); }
     }

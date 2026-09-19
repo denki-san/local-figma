@@ -184,7 +184,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     const pluginDir = path.join(dir, 'plugin');
     await fs.mkdir(pluginDir, { recursive: true, mode: 0o700 });
     await fs.copyFile(path.join(assets, 'main.js'), path.join(pluginDir, 'main.js'));
-    const ui = (await fs.readFile(path.join(assets, 'ui.html'), 'utf8')).replace('SESSION_CONFIG', JSON.stringify({ port, token: tokens.plugin }));
+    const ui = (await fs.readFile(path.join(assets, 'ui.html'), 'utf8')).replace('SESSION_CONFIG', JSON.stringify({ port, token: tokens.plugin, binding: { fileKey: binding.fileKey, nodeId: binding.nodeId } }).replace(/</g, '\\u003c'));
     uiTouched = true;
     await fs.writeFile(path.join(pluginDir, 'ui.html'), ui, { mode: 0o600 });
     await save(path.join(pluginDir, 'manifest.json'), { name: 'Figma Local Runtime', api: '1.0.0', main: 'main.js', ui: 'ui.html', editorType: ['figma'], documentAccess: 'dynamic-page', enablePrivatePluginApi: true, networkAccess: { allowedDomains: ['none'], devAllowedDomains: [`http://localhost:${port}`] } });

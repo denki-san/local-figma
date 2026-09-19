@@ -29,6 +29,19 @@ function fixture() {
       channelNonce: deliveries[0]?.pluginMessage.channelNonce, ...message
     } } }) };
 }
+test('轻量面板显示已核对目标与选区，拒绝旧握手覆盖', async () => {
+  const f=fixture();await f.tick();
+  const contextNonce=f.contexts[0].pluginMessage.contextNonce;
+  await f.complete({type:'target-info',contextNonce,name:'目标卡片',issue:null});
+  assert.equal(f.element('target-name').textContent,'目标卡片');
+  await f.complete({type:'target-info',contextNonce:'old',name:'错误目标'});
+  assert.equal(f.element('target-name').textContent,'目标卡片');
+  await f.complete({type:'context-update',contextNonce,context:{selection:[{name:'标题'}]}});
+  assert.equal(f.element('selection-name').textContent,'当前选中：标题');
+  await f.complete({type:'target-info',contextNonce,name:'目标卡片',issue:'选区超出范围'});
+  await f.tick();assert.equal(f.state.textContent,'需要你处理');
+  assert.equal(f.element('state-detail').textContent,'选区超出范围');
+});
 test('连接后自动请求上下文，仅接受本次握手并提交最新选择', async () => {
   const f = fixture();
   await f.tick();

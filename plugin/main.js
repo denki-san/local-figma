@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 420, height: 420 });
+figma.showUI(__html__, { width: 340, height: 360, themeColors: true });
 let busy = false;
 let checkpointWaiter = null;
 let approvalWaiter = null;
@@ -6,6 +6,7 @@ let contextNonce = null;
 let contextGeneration = 0;
 let contextRefreshTimer = null;
 let contextPage = null;
+let uiBinding = null;
 function scheduleContextRefresh() {
   // 文档已经变化，先使旧异步扫描失效；短时间内的事件只触发一次补充。
   contextGeneration++;
@@ -34,6 +35,20 @@ function publishContext() {
   try {
     watchContextPage();
     const page = figma.currentPage;
+    if (uiBinding) {
+      const binding = uiBinding, nonce = contextNonce;
+      const report = (name, issue) => {
+        if (generation === contextGeneration && nonce === contextNonce) figma.ui.postMessage({type:'target-info',contextNonce:nonce,name,issue});
+      };
+      if (binding.fileKey !== figma.fileKey) report('请打开已发送链接的文件', '当前文件与目标不一致，请回到目标文件运行插件。');
+      else figma.getNodeByIdAsync(binding.nodeId).then(node => {
+        if (!node || node.removed) return report('', '目标已不可用，请把新的目标链接发给 Agent。');
+        let parent = node;
+        while (parent && parent.type !== 'PAGE') parent = parent.parent;
+        const outside = page.selection.some(selected => !within(selected, binding.nodeId));
+        report(node.name, parent?.id !== page.id ? '请切回目标所在页面后继续。' : outside ? '当前选区超出目标范围。请选择范围内内容，或把新链接发给 Agent。' : null);
+      }).catch(() => report('', '暂时无法读取目标，请让 Agent 检查连接。'));
+    }
     const selection = page.selection.slice(0, 100);
     const candidates = new Map();
     for (const selected of selection) {
@@ -218,6 +233,7 @@ async function discoverDesignSystem(target, options = {}) {
 figma.ui.onmessage = async job => {
   if (job?.type === 'context-request' && typeof job.contextNonce === 'string') {
     contextNonce = job.contextNonce;
+    uiBinding = job.binding && typeof job.binding.fileKey === 'string' && typeof job.binding.nodeId === 'string' ? job.binding : null;
     publishContext();
     return;
   }

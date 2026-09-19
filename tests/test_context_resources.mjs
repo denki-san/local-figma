@@ -14,6 +14,19 @@ function fixture(target) {
   vm.runInNewContext(source,{figma,__html__:'',setTimeout:cb=>{timers.set(++timerId,cb);return timerId;},clearTimeout:id=>timers.delete(id)});
   return {figma,page,messages,events,pageEvents,timers,tick:()=>{const pending=[...timers.values()];timers.clear();pending.forEach(cb=>cb());},start:()=>figma.ui.onmessage({type:'context-request',contextNonce:'test-context'})};
 }
+test('轻量面板从绑定解析目标名称，提示越界选区与错误文件',async()=>{
+  const target={id:'1:2',type:'FRAME',name:'目标卡片',children:[]};
+  const f=fixture(target);target.parent=f.page;
+  f.figma.getNodeByIdAsync=async()=>target;
+  await f.figma.ui.onmessage({type:'context-request',contextNonce:'panel',binding:{fileKey:'example',nodeId:'1:2'}});await flush();
+  let info=f.messages.filter(m=>m.type==='target-info').at(-1);
+  assert.equal(info.name,'目标卡片');assert.equal(info.issue,null);
+  f.page.selection=[{id:'1:9',type:'RECTANGLE',parent:f.page}];
+  f.events.get('selectionchange')();await flush();
+  info=f.messages.filter(m=>m.type==='target-info').at(-1);assert.match(info.issue,/超出目标范围/);
+  f.figma.fileKey='other';f.events.get('currentpagechange')();await flush();
+  assert.match(f.messages.filter(m=>m.type==='target-info').at(-1).issue,/当前文件与目标不一致/);
+});
 test('自动上下文先提供选区，再只读补充主组件、样式和填充变量',async()=>{
   const target={id:'1:2',type:'FRAME',name:'区域',children:[
     {id:'1:3',type:'INSTANCE',name:'按钮',getMainComponentAsync:async()=>({id:'2:1',name:'按钮主组件',remote:false})},

@@ -30,7 +30,18 @@ CLI、本机桥接和 Development Plugin 连接成一个编辑循环：理解当
 
 ## 安装与连接
 
-要求 Node.js 22+、Figma Desktop，以及目标文件编辑权限。当前安装测试覆盖 macOS；其他系统尚未验收。
+准备好 Figma Desktop、有编辑权限的文件，以及能执行本地任务的 Agent。把目标页面、画板或元素的链接和需求一起发给 Agent：
+
+> 帮我安装并连接 local-figma。目标是【Figma 链接】，我想【修改需求】。请处理依赖与本机连接，只在需要我在 Figma 中操作时告诉我。
+
+Agent 负责检查依赖、绑定链接和准备连接。首次按提示在对应 Figma 文件运行小插件；当前 Alpha 首次仍需手动导入开发插件，Agent 提供文件位置和具体操作。小窗口显示目标、选区及连接状态，无需在独立窗口重复粘贴链接或点击连接。
+
+连接后，在绑定范围内选中内容，回到对话继续说需求。同一目标无需重复发链接；换文件或超出范围时再提供新链接。首次连接仍需要链接，尚未支持无链接自动绑定选区。
+
+<details>
+<summary>供 Agent 查阅：安装与连接命令</summary>
+
+运行依赖为 Node.js 22+，由 Agent 检查和准备。当前安装测试覆盖 macOS；其他系统尚未验收。
 
 在源码目录执行：
 
@@ -60,6 +71,8 @@ figma-local wait <返回的任务ID> --timeout 30
 `wait` 等待结果与终态日志一致；超时退出 2，保留原任务继续核查，不重放脚本。也可用 `result <任务ID>` 立即读取当前证据。
 
 绑定整页时，`inspect` 先返回顶层目录。选取目录中本次要操作的节点，通过 `inspect --node 1:2`、`preview --node 1:2` 或 `run change.js --node 1:2` 进入局部范围，无需重启插件。节点必须位于原绑定范围内。
+
+</details>
 
 ## 向 Agent 提出任务
 
@@ -118,6 +131,10 @@ CLI 提供执行与证据能力；成稿质量由内容、设计判断和视觉�
 | 证据 | 脚本与结果留存、离线 history/result、子树 diff、有限结构 validate |
 | 引导 | 五种任务的 brief、资料缺口检查、参考与方向选择流程 |
 | 故障处理 | 结果回传重试、部分失败读回、桥接残留恢复、Undo 边界记录 |
+
+实例属性入口：Agent 可用 `props <完整属性名> --value <文字或true/false>` 覆盖单选独立实例的 TEXT / BOOLEAN 属性。保留主组件和其它属性，拒绝变量绑定、嵌套共享定义及外层自动布局重排风险。局部模拟检查及 Untitled 独立实例的文字/显隐覆盖、主组件默认值读回和截图已通过；VARIANT / INSTANCE_SWAP 未开放。
+
+颜色变量入口：Agent 可用 `bind-fill <已确认的颜色变量ID>` 将已有颜色变量绑定到当前单选图层的单个纯色填充。拒绝样式覆盖、共享组件定义、锁定区域及等待期间的选区变化；不创建或修改变量定义。4 项局部模拟检查通过；Untitled 当前没有颜色变量，真实绑定验收等待独立测试变量创建授权。
 
 完整命令以 `figma-local help` 为准。读取覆盖见 [inspect 说明](docs/inspect-coverage.md)，输出字段见 [协议合同](docs/protocol.md)，进度见 [实现状态](docs/implementation-status.md)。
 
