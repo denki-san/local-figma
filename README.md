@@ -48,6 +48,8 @@ Agent 会给你一个插件配置文件的位置，并带你完成这几步：
 
 **使用期间，保持插件和 Agent 启动的连接程序运行。**
 
+![Figma Local Runtime 插件显示已连接，可以让 Agent 继续操作当前文件](assets/plugin-connected.png)
+
 ### 2. 选好要修改的画板
 
 在 Figma 中选中要修改的整块画板，也就是 **Frame**，再右键点击画板，依次选择：
