@@ -1,4 +1,5 @@
 import { isNodeId } from './node-id.mjs';
+import { textOperation, fillOperation } from './edit-operations.mjs';
 // 高层操作由 Agent 调用；用户无需提供脚本或节点 ID。
 export function selectedPrototypeEdit(state, destinationId) {
   if (!state?.connected || state.stale) throw Error('正在重连，稍后再修改');
@@ -124,27 +125,7 @@ export function selectedFillEdit(state, hex) {
   const selection = state.context?.selection;
   const types = ['FRAME', 'RECTANGLE', 'ELLIPSE', 'VECTOR', 'TEXT', 'INSTANCE'];
   if (!Array.isArray(selection) || selection.length !== 1 || !types.includes(selection[0].type)) throw Error('请先选中一个可填充的图层');
-  if (typeof hex !== 'string' || !/^#[0-9a-f]{6}$/i.test(hex)) throw Error('颜色需要六位十六进制格式，例如 #3366FF');
-  const color = { r: parseInt(hex.slice(1,3),16)/255, g: parseInt(hex.slice(3,5),16)/255, b: parseInt(hex.slice(5,7),16)/255 };
-  return { operation: 'run', targetNodeId: selection[0].id, code: `
-const expectedPage = ${JSON.stringify(state.context.pageId)};
-const expectedType = ${JSON.stringify(selection[0].type)};
-const color = ${JSON.stringify(color)};
-if (target.removed || target.type !== expectedType || figma.currentPage.id !== expectedPage || figma.currentPage.selection.length !== 1 || figma.currentPage.selection[0].id !== target.id) throw Error('选择已变化，本次未修改');
-for (let node=target; node && node.type!=='PAGE'; node=node.parent) {
-  if (node.locked) throw Error('选中区域已锁定，本次未修改');
-  if (['COMPONENT','COMPONENT_SET'].includes(node.type)) throw Error('当前区域属于主组件，请先确认组件修改范围');
-}
-if (target.fillStyleId) throw Error('填充已绑定样式，请先明确样式修改范围');
-const paints=target.fills;
-if (!Array.isArray(paints) || paints.length!==1 || paints[0].type!=='SOLID' || paints[0].visible===false) throw Error('仅支持单个可见纯色填充；多层、混合样式和图片需单独处理');
-if (Object.keys(paints[0].boundVariables || {}).length || target.boundVariables?.fills?.length) throw Error('填充已绑定变量，请使用变量调整流程');
-const paint={...paints[0],color};
-target.fills=[paint];
-const after=target.fills;
-if (!Array.isArray(after) || after.length!==1 || after[0].type!=='SOLID' || ['r','g','b'].some(k=>!Number.isFinite(after[0].color?.[k]) || Math.abs(after[0].color[k]-color[k])>0.000001)) throw Error('修改后颜色读回不一致，请检查画布');
-return {changedNodeIds:[target.id],operation:'fill',color:after[0].color};
-` };
+  return fillOperation({ targetId: selection[0].id, pageId: state.context.pageId, type: selection[0].type, requireSelection: true }, hex);
 }
 
 export function selectedLayoutEdit(state, values) {
@@ -184,25 +165,5 @@ export function selectedTextEdit(state, text) {
   if (!state?.connected || state.stale) throw Error('正在重连，稍后再修改');
   const selection = state.context?.selection;
   if (!Array.isArray(selection) || selection.length !== 1 || selection[0].type !== 'TEXT') throw Error('请先在 Figma 中选中一处文字');
-  if (typeof text !== 'string' || text.length > 50000) throw Error('文字内容无效或过长，请分段修改');
-  return { operation: 'run', targetNodeId: selection[0].id, code: `
-const expectedPage = ${JSON.stringify(state.context.pageId)};
-const content = ${JSON.stringify(text)};
-function checkSelection() {
-  if (target.removed || target.type !== 'TEXT' || figma.currentPage.id !== expectedPage || figma.currentPage.selection.length !== 1 || figma.currentPage.selection[0].id !== target.id) throw Error('选择已变化，本次未修改，请重新确认选中的文字');
-  for (let node = target; node && node.type !== 'PAGE'; node = node.parent) {
-    if (node.locked) throw Error('选中区域已锁定，本次未修改');
-    if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') throw Error('当前文字属于主组件，请先确认组件修改范围');
-  }
-}
-checkSelection();
-const before = target.characters;
-const fonts = target.fontName === figma.mixed ? target.getRangeAllFontNames(0, before.length) : [target.fontName];
-for (const font of fonts) await figma.loadFontAsync(font);
-checkSelection();
-if (target.characters !== before) throw Error('文字已发生变化，本次未覆盖');
-target.characters = content;
-if (target.characters !== content) throw Error('修改后读回不一致，请检查画布');
-return { changedNodeIds: [target.id], operation: 'text', characters: target.characters };
-` };
+  return textOperation({ targetId: selection[0].id, pageId: state.context.pageId, requireSelection: true }, text);
 }

@@ -2,8 +2,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
+import { contract } from './helpers/test_schema.mjs';
 
 const source = await fs.readFile(new URL('../plugin/main.js', import.meta.url), 'utf8');
+test('独立 inspect 区分目标确实缺失与普通执行错误，保留原文件证据', async () => {
+  const f = fixture();
+  f.figma.getNodeByIdAsync = async () => null;
+  await f.figma.ui.onmessage({ id: 'missing', operation: 'inspect', targetNodeId: '1:3', binding: { fileKey: 'abc', nodeId: '1:2' } });
+  const result = f.messages[0];
+  assert.equal(result.ok, false); assert.equal(result.executionStarted, false);
+  assert.equal(result.targetMissing, true); assert.equal(result.missingNodeId, '1:3'); assert.equal(result.fileVerified, 'abc');
+  assert.equal(f.checkpoints.length, 0);
+  const { channelNonce, ...persisted } = result;
+  contract('result', { ...persisted, id: '00000000-0000-4000-8000-000000000001', finishedAt: '2026-09-19T00:00:00.000Z' });
+});
 test('停机页缩小窗口，常驻面板保留确认区空间', () => {
   for (const [html, height] of [['', 280], ['<html data-runtime-inactive>', 170]]) {
     let size;

@@ -7,6 +7,7 @@ import { json, root, save, hash } from './project.mjs';
 import { createConnection } from './connection.mjs';
 import { pairingToken, unfinishedOperations } from './session-state.mjs';
 import { isNodeId } from './node-id.mjs';
+import { listExtensions, configureExtension } from './extensions.mjs';
 
 const assets = fileURLToPath(new URL('../plugin/', import.meta.url));
 function inactiveUi(title, detail) {
@@ -29,6 +30,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
   let active = null;
   let context = null, contextOwner = null;
   const jobs = new Map();
+  const unresolved = new Set();
   const completing = new Map();
   const checkpoints = new Map();
   const approvals = new Map();
@@ -55,20 +57,24 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     const completed = { ...job, result, state: result.ok ? 'done' : 'failed' };
     await save(path.join(runDir(job.id), 'job.json'), completed);
     Object.assign(job, completed);
-    if (active === job.id) active = [...jobs.values()].find(item => item.id !== job.id && item.state === 'running')?.id ?? null;
+    unresolved.delete(job.id);
+    if (active === job.id) active = null;
   }
   const server = http.createServer(async (req, res) => {
     const reply = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Session-Token');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Figma-Session');
+    res.setHeader('X-Figma-Session', sessionId);
     if (req.method === 'OPTIONS') return reply(204, null);
     try {
       const u = new URL(req.url, 'http://localhost');
-      const role = ['/poll', '/heartbeat', '/checkpoint', '/approve', '/complete'].includes(u.pathname) || (u.pathname === '/context' && req.method === 'POST') ? 'plugin' : 'cli';
+      const role = ['/poll', '/heartbeat', '/checkpoint', '/approve', '/complete', '/extensions'].includes(u.pathname) || (u.pathname === '/context' && req.method === 'POST') ? 'plugin' : 'cli';
       if (req.headers['x-session-token'] !== tokens[role]) return reply(403, { error: '认证失败' });
+      if (req.method === 'GET' && u.pathname === '/extensions') return reply(200, await listExtensions(cwd));
       if (req.method === 'GET' && u.pathname === '/context') return reply(200, { connected: connection.connected, context, stale: !context || !connection.owns(contextOwner) });
-      if (req.method === 'GET' && u.pathname === '/status') return reply(200, { sessionId, connected: connection.connected, pollAgeMs: connection.ageMs, active, binding, jobs: [...jobs.values()].map(j => ({ id: j.id, state: j.state })) });
+      if (req.method === 'GET' && u.pathname === '/status') return reply(200, { sessionId, connected: connection.connected, pollAgeMs: connection.ageMs, active, unresolved: [...unresolved], binding, jobs: [...jobs.values()].map(j => ({ id: j.id, state: j.state })) });
       if (req.method === 'GET' && ['/poll', '/heartbeat'].includes(u.pathname)) {
         const client = u.searchParams.get('client');
         const lease = connection.touch(client, active !== null);
@@ -95,6 +101,10 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
       const chunks = []; let size = 0;
       for await (const c of req) { size += c.length; if (size > 16 * 1024 * 1024) return reply(413, { error: '请求过大' }); chunks.push(c); }
       const data = JSON.parse(Buffer.concat(chunks).toString());
+      if (u.pathname === '/extensions') {
+        if (!connection.owns(data.client)) return reply(409, { error: '连接已变化，请重新打开设置' });
+        return reply(200, await configureExtension(cwd, data));
+      }
       if (u.pathname === '/context') {
         if (!connection.owns(data.client)) return reply(409, { error: '连接已变化，忽略旧上下文' });
         if (data.context?.fileKey !== binding.fileKey || typeof data.context.pageId !== 'string' || !Array.isArray(data.context.selection) || data.context.selection.length > 100 || JSON.stringify(data.context).length > 256 * 1024) throw Error('上下文目标或大小无效');
@@ -146,6 +156,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
         if (!connection.connected) return reply(409, { error: '正在重连，请稍候；当前请求尚未执行', code: 'RECONNECTING' });
         if (active) return reply(409, { error: '有未完成任务；先读回结果，禁止重放' });
         if (!['inspect', 'preview', 'design-system', 'run'].includes(data.operation)) throw Error('未知操作');
+        if (unresolved.size && data.operation === 'run') return reply(409, { code: 'REVIEW_REQUIRED', error: '上次操作需要核验；可先 inspect 或 preview，核验后 resolve，禁止重放', unresolved: [...unresolved] });
         if (data.targetNodeId !== undefined && !isNodeId(data.targetNodeId)) throw Error('局部目标 ID 无效');
         if (data.operation === 'run' && (typeof data.code !== 'string' || !data.code.trim())) throw Error('缺少可信脚本');
         const risk = data.risk || { level: 'normal' };
@@ -160,6 +171,23 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
           jobs.set(id, job);
         } catch (error) { active = null; throw error; }
         return reply(202, { id, state: 'queued', evidence: runDir(id) });
+      }
+      if (u.pathname === '/resolve') {
+        const job = jobs.get(data.id), review = jobs.get(data.inspectId);
+        if (!job || !unresolved.has(job.id) || data.previousPluginStopped !== true) throw Error('需要确认旧插件已停止，并提供当前未决任务');
+        if (active || !connection.connected || !review || review.recovered === true || review.operation !== 'inspect' || !['done', 'failed'].includes(review.state)) throw Error('需要先完成当前会话的独立 inspect');
+        const reviewTarget = review.targetNodeId ?? binding.nodeId;
+        const targetRead = review.result?.ok === true && review.result.output?.id === reviewTarget &&
+          review.result.bindingVerified?.fileKey === binding.fileKey && review.result.bindingVerified?.nodeId === reviewTarget;
+        const targetMissing = review.result?.ok === false && review.result.executionStarted === false && review.result.targetMissing === true &&
+          review.result.missingNodeId === reviewTarget && review.result.fileVerified === binding.fileKey;
+        if (reviewTarget !== (job.targetNodeId ?? binding.nodeId) || (!targetRead && !targetMissing)) throw Error('核验需要直接查询原任务目标，不能用上层页面快照或一般错误替代');
+        const resolution = { id: job.id, bindingId: binding.id, inspectId: review.id,
+          status: 'reviewed-without-replay', previousPluginStopped: true, targetMissing, reviewedAt: new Date().toISOString(),
+          instruction: '已核对当前文档并结束等待；原任务执行结果保持未知，未重放或撤销' };
+        await save(path.join(runDir(job.id), 'resolution.json'), resolution);
+        unresolved.delete(job.id);
+        return reply(200, resolution);
       }
       if (u.pathname === '/complete') {
         const job = jobs.get(data.id);
@@ -182,8 +210,10 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
   try {
     if (connectionOptions.persistentPlugin) {
       tokens.plugin = await pairingToken(dir);
-      for (const job of await unfinishedOperations(dir, binding.id)) jobs.set(job.id, job);
-      active = [...jobs.keys()][0] ?? null;
+      for (const job of await unfinishedOperations(dir, binding.id)) {
+        jobs.set(job.id, job);
+        unresolved.add(job.id);
+      }
     }
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
     port = server.address().port;

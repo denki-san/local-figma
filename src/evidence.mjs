@@ -17,15 +17,15 @@ export async function evidence(cwd, id) {
   if (result && typeof result.ok !== 'boolean') throw Error('结果状态无效');
   const checkpoint = await optional(path.join(dir, 'before.json'));
   if (checkpoint && checkpoint.id !== id) throw Error('修改前快照任务 ID 不匹配');
-  return { job, result, checkpoint, recovery: await optional(path.join(dir, 'recovery.json')), dir };
+  return { job, result, checkpoint, recovery: await optional(path.join(dir, 'recovery.json')), resolution: await optional(path.join(dir, 'resolution.json')), dir };
 }
 export async function localResult(cwd, id) {
   const record = await evidence(cwd, id);
   const journalComplete = !!record.result && record.job.state === (record.result.ok ? 'done' : 'failed') && isDeepStrictEqual(record.job.result, record.result);
   return { source: 'local-evidence', evidence: record.dir, result: record.result,
     checkpointFile: record.checkpoint ? path.join(record.dir, 'before.json') : null,
-    recordedState: record.job.state, journalComplete, recovery: record.recovery,
-    instruction: journalComplete ? '结果来自已保存证据；视觉与交互需单独检查' : record.result
+    recordedState: record.job.state, journalComplete, recovery: record.recovery, resolution: record.resolution,
+    instruction: journalComplete ? '结果来自已保存证据；视觉与交互需单独检查' : record.resolution ? record.resolution.instruction : record.result
       ? '结果已保存，任务日志尚未确认完成；检查 bridge 状态并保留插件以便重试回传，禁止重放脚本'
       : '尚无持久化结果；先检查连接并读回文档，禁止盲目重放' };
 }
@@ -36,10 +36,10 @@ export async function history(cwd) {
   const runs = [];
   for (const entry of entries.filter(e => e.isDirectory() && validId(e.name))) {
     try {
-      const { job, result, recovery } = await evidence(cwd, entry.name);
+      const { job, result, recovery, resolution } = await evidence(cwd, entry.name);
       runs.push({ id: job.id, operation: job.operation, createdAt: job.createdAt,
         recordedState: job.state, hasResult: !!result, ok: result?.ok ?? null,
-        recovery: recovery?.status ?? null });
+        recovery: recovery?.status ?? null, resolution: resolution?.status ?? null });
     } catch (error) { runs.push({ id: entry.name, error: error.message }); }
   }
   runs.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '') || a.id.localeCompare(b.id));

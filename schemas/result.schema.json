@@ -12,10 +12,25 @@
     "undoBoundaries": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["before", "after"],
+      "required": [
+        "before",
+        "after"
+      ],
       "properties": {
-        "before": { "enum": ["not-run", "committed", "failed"] },
-        "after": { "enum": ["not-run", "committed", "failed"] }
+        "before": {
+          "enum": [
+            "not-run",
+            "committed",
+            "failed"
+          ]
+        },
+        "after": {
+          "enum": [
+            "not-run",
+            "committed",
+            "failed"
+          ]
+        }
       }
     },
     "id": {
@@ -72,6 +87,15 @@
       "type": "boolean"
     },
     "recovery": {
+      "type": "string"
+    },
+    "targetMissing": {
+      "const": true
+    },
+    "missingNodeId": {
+      "type": "string"
+    },
+    "fileVerified": {
       "type": "string"
     }
   },
@@ -143,6 +167,28 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "targetMissing"
+        ]
+      },
+      "then": {
+        "required": [
+          "missingNodeId",
+          "fileVerified",
+          "executionStarted"
+        ],
+        "properties": {
+          "ok": {
+            "const": false
+          },
+          "executionStarted": {
+            "const": false
+          }
+        }
       }
     }
   ]

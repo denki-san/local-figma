@@ -38,6 +38,13 @@ export async function unfinishedOperations(dir, bindingId) {
       await save(path.join(run, 'job.json'), { ...job, result, state: result.ok ? 'done' : 'failed' });
       continue;
     }
+    let resolution;
+    try { resolution = await json(path.join(run, 'resolution.json')); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (resolution) {
+      if (resolution.id !== job.id || resolution.bindingId !== job.bindingId || resolution.status !== 'reviewed-without-replay' || resolution.previousPluginStopped !== true || !/^[a-f0-9-]{36}$/.test(resolution.inspectId || '')) throw Error('操作核验记录损坏，需要检查');
+      continue;
+    }
     if (job.bindingId !== bindingId) throw Error('存在其他目标的未确认操作，需要先检查');
     // 队列记录无法证明插件是否已领取，恢复时一律禁止自动交付。
     pending.push({ ...job, state: 'running', recovered: true });

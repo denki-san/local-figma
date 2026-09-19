@@ -15,19 +15,26 @@ function fixture() {
   const calls = [], deliveries = [], responses = [];
   const state = { textContent: '' };
   const elements = new Map([['state', state]]);
-  const element = id => { if (!elements.has(id)) elements.set(id, {}); return elements.get(id); };
+  const element = id => {
+    if (!elements.has(id)) {
+      const value = { value: '', appendChild(option) { if (!this.value) this.value = option.value; } };
+      if (id === 'extension-choice') Object.defineProperty(value, 'textContent', { set() { this.value = ''; } });
+      elements.set(id, value);
+    }
+    return elements.get(id);
+  };
   let tick;
   const contexts = [];
   const parent = { postMessage: message => (message.pluginMessage.type === 'context-request' ? contexts : deliveries).push(message) };
   const window = {};
   vm.runInNewContext(html.match(/<script>([\s\S]*)<\/script>/)[1].replace('SESSION_CONFIG', JSON.stringify({ port: 1234, token: 'test' })), {
-    parent, window, crypto: { getRandomValues: values => crypto.getRandomValues(values) }, document: { getElementById: element },
+    parent, window, crypto: { getRandomValues: values => crypto.getRandomValues(values) }, document: { getElementById: element, createElement: () => ({}) },
     AbortSignal, TextEncoder, setInterval: callback => { tick = callback; },
     fetch: async (url, options) => {
       calls.push({ url, options });
       const response = responses.shift();
       if (response instanceof Error) throw response;
-      return { ok: response?.ok ?? true, status: response?.status ?? 200, json: async () => response?.body ?? null };
+      return { ok: response?.ok ?? true, status: response?.status ?? 200, headers: { get: () => response?.session ?? null }, json: async () => response?.body ?? null };
     }
   });
   return { calls, deliveries, contexts, responses, tick: () => tick(), state, element,
@@ -35,6 +42,20 @@ function fixture() {
       channelNonce: deliveries[0]?.pluginMessage.channelNonce, ...message
     } } }) };
 }
+test('保存第二个扩展后保留选中项，随后清除操作仍指向同一扩展', async () => {
+  const f = fixture();
+  const extensions = [{ id: 'first', name: '第一个', enabled: false }, { id: 'second', name: '第二个', enabled: false }];
+  f.responses.push({ body: { extensions } }); await f.element('settings-open').onclick();
+  f.element('extension-choice').value = 'second'; f.element('extension-choice').onchange();
+  f.element('extension-key').value = 'test-key'; f.element('extension-enabled').checked = true;
+  extensions[1].enabled = true;
+  f.responses.push({ body: { extensions } }); await f.element('settings-save').onclick();
+  assert.equal(f.element('extension-choice').value, 'second');
+  assert.equal(f.element('extension-enabled').checked, true); assert.equal(f.element('extension-key').value, '');
+  f.responses.push({ body: { extensions } }); await f.element('settings-clear').onclick();
+  assert.equal(JSON.parse(f.calls.at(-1).options.body).id, 'second');
+  assert.equal(JSON.parse(f.calls.at(-1).options.body).clearApiKey, true);
+});
 test('轻量面板显示已核对目标与选区，拒绝旧握手覆盖', async () => {
   const f=fixture();await f.tick();
   const contextNonce=f.contexts[0].pluginMessage.contextNonce;
@@ -50,6 +71,26 @@ test('轻量面板显示已核对目标与选区，拒绝旧握手覆盖', async
   await f.complete({type:'target-info',contextNonce,name:'目标卡片',issue:'选区超出范围'});
   await f.tick();assert.equal(f.state.textContent,'目标需调整');
   assert.equal(f.element('state-detail').textContent,'选区超出范围');
+});
+test('桥接会话变化重新读取上下文，旧握手无法覆盖新状态', async () => {
+  const f = fixture();
+  f.responses.push({ session: 'session-one' }); await f.tick();
+  const first = f.contexts[0].pluginMessage.contextNonce;
+  await f.complete({ type: 'context-update', contextNonce: first, context: { selection: [{ name: '旧选区' }] } });
+  await f.tick();
+  assert.equal(f.state.textContent, '已连接');
+  f.responses.push({ session: 'session-two' }); await f.tick();
+  const second = f.contexts[1].pluginMessage.contextNonce;
+  assert.notEqual(second, first);
+  assert.equal(f.state.textContent, '正在准备上下文');
+  const count = f.calls.filter(c => c.url.endsWith('/context')).length;
+  await f.complete({ type: 'context-update', contextNonce: first, context: { selection: [] } });
+  await f.tick();
+  assert.equal(f.calls.filter(c => c.url.endsWith('/context')).length, count);
+  await f.complete({ type: 'context-update', contextNonce: second, context: { selection: [{ name: '当前选区' }] } });
+  await f.tick();
+  assert.equal(f.state.textContent, '已连接');
+  assert.equal(f.calls.filter(c => c.url.endsWith('/context')).length, count + 1);
 });
 test('连接后自动请求上下文，仅接受本次握手并提交最新选择', async () => {
   const f = fixture();

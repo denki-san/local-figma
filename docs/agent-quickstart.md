@@ -1,15 +1,15 @@
 # Agent 操作指南
 
-本指南面向能执行用户本机命令、读取图片的 Agent，适用于 local-figma v0.1.0-alpha.1。用户提供 Figma 选区链接、需求和目标文件的编辑权限；Agent 负责安装、连接、局部执行与结果核验。用户在首次连接时运行开发插件，并确认设计效果。
+本指南面向能执行用户本机命令、读取图片的 Agent，适用于 local-figma v0.1.0-alpha.2。用户提供 Figma 选区链接、需求和目标文件的编辑权限；Agent 负责安装、连接、局部执行与结果核验。用户在首次连接时运行开发插件，并确认设计效果。
 
 ## 1. 准备目标与连接
 
 确认运行环境为 macOS、Node.js 22+ 和 Figma Desktop。要求用户提供包含 `node-id` 的目标 Frame 链接；只用该链接建立写入目标。先确定保存本地证据的项目目录，后续命令都在同一目录执行。
 
-从 [v0.1.0-alpha.1 Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1) 下载 `figma-local-runtime-0.1.0-alpha.1.tgz` 后安装：
+从 [v0.1.0-alpha.2 Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2) 下载 `figma-local-runtime-0.1.0-alpha.2.tgz` 后安装：
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.1.tgz
+npm install -g ./figma-local-runtime-0.1.0-alpha.2.tgz
 figma-local help
 figma-local init '<用户提供的含 node-id 的 Figma 链接>'
 figma-local connect

@@ -169,7 +169,7 @@ function tree(node, depth = 0, budget = { count: 0 }) {
   if (++budget.count > 2000) throw Error('目标超过 2000 个节点，请绑定更小区域');
   const value = { id: node.id, name: node.name, type: node.type };
   for (const key of [
-    'visible', 'locked', 'x', 'y', 'width', 'height', 'rotation', 'opacity',
+    'visible', 'locked', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'relativeTransform', 'absoluteBoundingBox',
     'layoutMode', 'primaryAxisSizingMode', 'counterAxisSizingMode', 'layoutSizingHorizontal', 'layoutSizingVertical',
     'primaryAxisAlignItems', 'counterAxisAlignItems', 'layoutAlign', 'layoutGrow', 'layoutPositioning', 'layoutWrap',
     'itemSpacing', 'counterAxisSpacing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
@@ -320,6 +320,12 @@ figma.ui.onmessage = async job => {
     if (figma.fileKey !== job.binding.fileKey) throw Error('当前文件与用户链接不匹配');
     if (figma.editorType !== 'figma' || figma.mode !== 'default') throw Error('请在 Figma Design 编辑模式运行插件');
     const candidate = await figma.getNodeByIdAsync(job.targetNodeId ?? job.binding.nodeId);
+    if (candidate === null && job.operation === 'inspect') {
+      send({ id: job.id, ok: false, executionStarted: false, targetMissing: true,
+        missingNodeId: job.targetNodeId ?? job.binding.nodeId, fileVerified: figma.fileKey,
+        error: '已在绑定文件中查询原目标，当前节点不存在；请结合原任务和画布核验', recovery: '保留缺失证据，禁止重放原脚本' });
+      return;
+    }
     if (!candidate || !within(candidate, job.binding.nodeId)) throw Error('局部目标不存在或超出绑定范围');
     target = candidate;
     console.info('[figma-local] 已解析目标');

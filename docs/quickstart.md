@@ -1,6 +1,6 @@
 # 快速开始
 
-local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原生图层。准备 macOS、Node.js 22+、Figma Desktop，以及目标文件的编辑权限。首次连接使用含 `node-id` 的 Figma 链接；安装包从 [GitHub Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1) 下载。
+local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原生图层。准备 macOS、Node.js 22+、Figma Desktop，以及目标文件的编辑权限。首次连接使用含 `node-id` 的 Figma 链接；安装包从 [GitHub Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2) 下载。
 
 把链接和需求发给 Agent，复制文本见[向 Agent 提任务](first-task.md)。以下命令供 Agent 或自行操作的开发者使用。
 
@@ -9,7 +9,7 @@ local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原
 从 Release 下载 `.tgz` 后安装；在仓库源码目录也可运行 `npm install -g .`。
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.1.tgz
+npm install -g ./figma-local-runtime-0.1.0-alpha.2.tgz
 figma-local help
 ```
 
@@ -42,6 +42,10 @@ figma-local result TASK_ID
 - 连接异常：检查桥接终端、插件和当前文件；从原型预览返回编辑页，再运行 `figma-local doctor`。
 - 等待超时或执行失败：先查原任务的 `result TASK_ID` 和当前 Figma 文档，再决定下一步。已提交任务可能已经修改设计。
 - 桥接异常退出：确认旧进程已退出、关闭旧插件，再运行 `figma-local recover` 清理残留会话；随后重新连接并读回文档。
+
+持久会话重启后，`status.unresolved` 列出结果未确认的旧任务。先读取原任务记录，对它的实际目标执行 `inspect --node <原目标ID>` 并等待结果。核对画布与快照、确认旧插件已停止后，执行 `resolve <原任务ID> --inspect <新核验任务ID> --previous-plugin-stopped`。核验必须来自当前会话并直接查询原目标，上层页面的浅层快照不能替代。目标已删除时，inspect 返回经过文件核验的缺失证据，仍可用于人工核验后的 resolve。
+
+`resolve` 只结束等待并允许后续操作，原任务执行结果保持未知。它不会重放、撤销或伪造成功记录。缺少充分证据时继续只读检查。
 - 高风险修改：插件会显示范围和脚本，由你本人确认。
 
 请使用经过审阅的本地 JavaScript 脚本。详细输出与退出码见[协议](protocol.md)，读取范围见[快照覆盖](inspect-coverage.md)，权限与数据边界见[安全说明](../SECURITY.md)。本地 `.figma-agent/` 含脚本、文字和截图；分享前请检查并脱敏。

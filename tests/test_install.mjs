@@ -23,6 +23,7 @@ test('实际安装包只含运行资源，离线安装后 CLI 与插件可用', 
   }
   assert(files.every(file => !/^(examples|macos|tests|\.figma-agent|\.learnings)\//.test(file)));
   assert(files.every(file => !/^docs\/test[-_]/.test(file) && !file.endsWith('.tgz')));
+  assert(files.every(file => !/jev|\.local-extensions|extension-credentials|skills-lock|^test_/.test(file)));
 
   const shipped = new Set(files);
   for (const file of files.filter(file => file.endsWith('.md'))) {
@@ -50,6 +51,7 @@ test('实际安装包只含运行资源，离线安装后 CLI 与插件可用', 
   assert.equal((await cli(['guide', 'refine'])).brief.mode, 'refine');
   assert.equal((await cli(['guide', 'design'])).brief.mode, 'design');
   assert.deepEqual((await cli(['history'])).runs, []);
+  assert.deepEqual((await cli(['extension', 'list'])).extensions, []);
 
   const { start } = await import(pathToFileURL(path.join(installed, 'src/bridge.mjs')));
   const bridge = await start(project, 0);

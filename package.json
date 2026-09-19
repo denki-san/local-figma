@@ -1,6 +1,6 @@
 {
   "name": "figma-local-runtime",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "面向 Agent 的本地 Figma 编辑运行时",
   "license": "Apache-2.0",
   "repository": { "type": "git", "url": "git+https://github.com/denki-san/local-figma.git" },
@@ -9,7 +9,7 @@
   "type": "module",
   "bin": { "figma-local": "bin/figma-local.mjs" },
   "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "plugin/", "schemas/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "assets/preview.png", "assets/usage-flow.png", "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
+  "files": ["bin/", "src/", "!src/jev*.mjs", "plugin/", "schemas/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "assets/preview.png", "assets/usage-flow.png", "README.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
   "scripts": { "test": "node --test tests/test_*.mjs", "check": "node --check bin/figma-local.mjs && node --check plugin/main.js" },
   "devDependencies": { "ajv": "8.20.0" }
 }

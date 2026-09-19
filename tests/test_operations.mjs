@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { selectedTextEdit } from '../src/operations.mjs';
 const state = { connected: true, stale: false, context: { pageId: '1:1', selection: [{ id: '1:2', type: 'TEXT' }] } };
 function fixture(onLoad = () => {}) {
-  const target = { id: '1:2', type: 'TEXT', characters: '原文', fontName: { family: '测试字体', style: 'Regular' }, parent: { type: 'FRAME', parent: { type: 'PAGE' } } };
+  const target = { id: '1:2', type: 'TEXT', characters: '原文', fontName: { family: '测试字体', style: 'Regular' }, parent: { type: 'FRAME', parent: { id: '1:1', type: 'PAGE' } } };
   const figma = { currentPage: { id: '1:1', selection: [target] }, loadFontAsync: async () => onLoad(target, figma) };
   const invoke = text => new Function('figma', 'target', 'return (async()=>{' + selectedTextEdit(state, text).code + '})()')(figma, target);
   return { target, figma, invoke };

@@ -9,6 +9,7 @@ export async function waitForResult(cwd, id, timeoutSeconds = 30) {
   while (true) {
     const record = await localResult(cwd, id);
     if (record.journalComplete) return { ...record, waitStatus: 'completed' };
+    if (record.resolution) return { ...record, waitStatus: 'needs-review' };
     if (record.recovery) return { ...record, waitStatus: 'needs-review', instruction: '任务含恢复提示；先核对文档与桥接，禁止重放脚本' };
     const remaining = timeoutSeconds * 1000 - (performance.now() - started);
     if (remaining <= 0) return { ...record, waitStatus: 'timeout', instruction: '等待已到期，任务执行状态仍需核查；保留插件，读取 status，禁止重放脚本' };

@@ -2,7 +2,7 @@
 
 把 Figma 画板链接和需求交给 Agent，让它在本机读取、修改并检查原生可编辑的设计稿。你负责提出需求、在首次使用时运行插件，以及确认最终效果。
 
-当前试用版为 [v0.1.0-alpha.1](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1)。需要 macOS、Node.js 22+、Figma Desktop、目标文件的编辑权限，以及能执行本地命令和查看图片的 Agent。
+当前试用版为 [v0.1.0-alpha.2](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2)。需要 macOS、Node.js 22+、Figma Desktop、目标文件的编辑权限，以及能执行本地命令和查看图片的 Agent。
 
 ![本地工具生成的原生 Figma 页面，使用合成演示数据](assets/preview.png)
 
@@ -36,8 +36,10 @@
 
 ## 安装、帮助与安全
 
-Agent 从 [Release 安装包](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1)安装，并按[Agent 操作指南](docs/agent-quickstart.md)连接、检查和交付。想自己操作命令，可看[手动快速开始](docs/quickstart.md)。完整命令以 `figma-local help` 为准，开发者可查阅[输出协议](docs/protocol.md)和[贡献指南](CONTRIBUTING.md)。
+Agent 从 [Release 安装包](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2)安装，并按[Agent 操作指南](docs/agent-quickstart.md)连接、检查和交付。想自己操作命令，可看[手动快速开始](docs/quickstart.md)。完整命令以 `figma-local help` 为准，开发者可查阅[输出协议](docs/protocol.md)和[贡献指南](CONTRIBUTING.md)。
 
-连接中断或等待超时时，让 Agent 先核对原任务结果和 Figma 画布，再继续。脚本、文字和截图会保存在本地 `.figma-agent/`；分享该目录前请检查内容。更多信息见[版本说明](docs/releases/v0.1.0-alpha.1.md)和[安全说明](SECURITY.md)。
+连接中断或等待超时时，让 Agent 先核对原任务结果和 Figma 画布，再继续。脚本、文字和截图会保存在本地 `.figma-agent/`；分享该目录前请检查内容。更多信息见[版本说明](docs/releases/v0.1.0-alpha.2.md)和[安全说明](SECURITY.md)。
+
+普通版无需模型 API key。可选能力通过本地扩展单独安装，在 Figma 插件的「设置」中填写密钥并启用；未配置时保持普通流程。开发者可查阅[扩展接口](docs/extensions.md)。
 
 本项目采用 [Apache-2.0](LICENSE) 许可证。

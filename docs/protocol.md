@@ -1,6 +1,6 @@
 # Alpha 实际输出合同
 
-适用版本：0.1.0-alpha.1。当前实现与未来规划分开维护；schema 范围见 [schemas](../schemas/README.md)。
+适用版本：0.1.0-alpha.2。当前实现与未来规划分开维护；schema 范围见 [schemas](../schemas/README.md)。
 
 ## 提交、执行和证据
 
@@ -26,6 +26,14 @@ run 结果新增 undoBoundaries：before/after 各为 not-run、committed 或 fa
 任务可选字段 `targetNodeId` 对应 CLI 的 `--node`，当前接受数字冒号节点 ID。省略时沿用项目 binding.nodeId；指定时插件检查目标仍在该绑定节点子树内。before.id 与 bindingVerified.nodeId 使用本次实际目标，checkpoint 接口与 job.targetNodeId 对照校验。项目 bindingId 保持原值。风险确认 UI 显示本次实际节点。
 
 插件 UI 为每个领取任务生成临时通道凭证，校验主线程回传的凭证和任务 ID，确认消息也绑定相同凭证；凭证不进入结果文件。这兼容桌面宿主不同的 MessageEvent.source 对象。
+
+## 恢复与扩展
+
+`status` 增加 `unresolved`，列出恢复后的未决任务；此时允许独立只读任务，阻止新的 run。`resolve` 仅接受当前会话对精确原目标的独立 inspect 和 `previousPluginStopped=true`，写入 `resolution.json`，原结果保持未知。`result`、`history` 的包装对象提供 `resolution`；未获得终态的 `wait` 返回 `needs-review`。
+
+对确实不存在的目标，inspect 返回 `ok=false`、`executionStarted=false`、`targetMissing=true`、`missingNodeId`、`fileVerified`，以及 `error` 和 `recovery`。该结果只证明当前文件中查询不到指定节点。一般请求异常、越出绑定范围或错误文件均不生成缺失证据。
+
+插件通过 `X-Figma-Session` 响应头识别桥接重启并刷新上下文。可选扩展配置接口仅向插件返回元数据和布尔配置状态，不返回 API key；接口和本机存储见[扩展文档](extensions.md)。
 
 ## Diff 语义
 

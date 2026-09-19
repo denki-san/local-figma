@@ -23,7 +23,7 @@ export async function recover(cwd) {
     requireExited(raw);
     const records = await history(cwd);
     if (records.runs.some(run => run.error)) throw Error('存在无法读取的历史任务，先检查 history 并修复证据；保留当前锁与凭证');
-    const unfinished = records.runs.filter(run => !['done', 'failed'].includes(run.recordedState));
+    const unfinished = records.runs.filter(run => !['done', 'failed'].includes(run.recordedState) && !run.resolution);
     const recoveryId = crypto.randomUUID();
     const archive = path.join(dir, 'recoveries', recoveryId);
     const recoveredAt = new Date().toISOString();

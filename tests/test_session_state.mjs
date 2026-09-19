@@ -33,9 +33,62 @@ test('固定插件跨服务重启保留配对，旧插件可回传结果且操�
   assert.equal((await fs.stat(path.join(dir, 'pairing.json'))).mode & 0o777, 0o600);
   assert.equal((await call('/status', originalSession.token)).status, 403);
   assert.equal((await call('/poll?client=original')).body, null);
-  assert.equal((await call('/job', nextSession.token, { operation: 'inspect' })).status, 409);
+  assert.equal((await call('/job', nextSession.token, { operation: 'run', code: 'return 9;' })).status, 409);
+  const inspect = (await call('/job', nextSession.token, { operation: 'inspect' })).body;
+  assert.equal((await call('/poll?client=original')).body.id, inspect.id);
+  await call('/complete', plugin.token, { id: inspect.id, ok: true, output: { id: '1:2' } });
   assert.equal((await call('/complete', plugin.token, { id: job.id, ok: true, output: 42 })).status, 200);
   assert.equal((await call('/complete', plugin.token, { id: job.id, ok: true, output: 99 })).status, 200);
   assert.equal((await call('/result?id=' + job.id, nextSession.token)).body.output, 42);
   assert.equal((await call('/job', nextSession.token, { operation: 'inspect' })).status, 202);
+});
+
+for (const missing of [false, true]) test(`原插件丢失后核验原目标${missing ? '缺失' : '存在'}，结束等待才恢复写入且不重放`, async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_reviewed_recovery_'));
+  await init(cwd, 'https://figma.com/design/abc/Test?node-id=1-2');
+  let server = await start(cwd, 0, { persistentPlugin: true });
+  t.after(async () => { await server.close(); await fs.rm(cwd, { recursive: true, force: true }); });
+  const dir = path.join(cwd, '.figma-agent');
+  const plugin = (await json(path.join(dir, 'pairing.json'))).token;
+  let cli = (await json(path.join(dir, 'session.json'))).token;
+  const call = async (route, token, data) => {
+    const response = await fetch(`http://127.0.0.1:${server.port}${route}`, { method: data ? 'POST' : 'GET', headers: { 'X-Session-Token': token }, body: data ? JSON.stringify(data) : undefined });
+    return { status: response.status, body: await response.json() };
+  };
+  await call('/poll?client=old', plugin);
+  const old = (await call('/job', cli, { operation: 'run', targetNodeId: '1:3', code: 'return 1;' })).body;
+  await call('/poll?client=old', plugin);
+  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  cli = (await json(path.join(dir, 'session.json'))).token;
+  assert.equal((await call('/poll?client=new', plugin)).body, null);
+  assert.deepEqual((await call('/status', cli)).body.unresolved, [old.id]);
+  assert.equal((await call('/job', cli, { operation: 'run', code: 'return 2;' })).status, 409);
+  const stale = (await call('/job', cli, { operation: 'inspect', targetNodeId: '1:3' })).body;
+  await call('/poll?client=new', plugin);
+  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  cli = (await json(path.join(dir, 'session.json'))).token;
+  await call('/poll?client=new', plugin);
+  await call('/complete', plugin, { id: stale.id, ok: true, output: { id: '1:3' }, bindingVerified: { fileKey: 'abc', nodeId: '1:3' } });
+  assert.equal((await call('/resolve', cli, { id: old.id, inspectId: stale.id, previousPluginStopped: true })).status, 400);
+  const unrelated = (await call('/job', cli, { operation: 'inspect' })).body;
+  await call('/poll?client=new', plugin);
+  await call('/complete', plugin, { id: unrelated.id, ok: true, output: { id: '1:2', children: [{ id: '2:1', truncated: true }] }, bindingVerified: { fileKey: 'abc', nodeId: '1:2' } });
+  assert.equal((await call('/resolve', cli, { id: old.id, inspectId: unrelated.id, previousPluginStopped: true })).status, 400);
+  const inspect = (await call('/job', cli, { operation: 'inspect', targetNodeId: '1:3' })).body;
+  const resolve = { id: old.id, inspectId: inspect.id, previousPluginStopped: true };
+  assert.equal((await call('/resolve', cli, resolve)).status, 400);
+  await call('/poll?client=new', plugin);
+  await call('/complete', plugin, missing
+    ? { id: inspect.id, ok: false, targetMissing: true, missingNodeId: '1:3', executionStarted: false, fileVerified: 'abc', error: '目标不存在' }
+    : { id: inspect.id, ok: true, output: { id: '1:3' }, bindingVerified: { fileKey: 'abc', pageId: '1:1', nodeId: '1:3' } });
+  assert.equal((await call('/resolve', plugin, resolve)).status, 403);
+  assert.equal((await call('/resolve', cli, { ...resolve, previousPluginStopped: false })).status, 400);
+  assert.equal((await call('/resolve', cli, resolve)).status, 200);
+  assert.deepEqual((await call('/status', cli)).body.unresolved, []);
+  await assert.rejects(fs.access(path.join(dir, 'runs', old.id, 'result.json')));
+  await server.close(); server = await start(cwd, 0, { persistentPlugin: true });
+  cli = (await json(path.join(dir, 'session.json'))).token;
+  assert.equal((await call('/poll?client=third', plugin)).body, null);
+  assert.deepEqual((await call('/status', cli)).body.unresolved, []);
+  assert.equal((await call('/job', cli, { operation: 'run', code: 'return 3;' })).status, 202);
 });

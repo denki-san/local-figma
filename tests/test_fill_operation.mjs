@@ -5,7 +5,7 @@ import { parseArguments } from '../src/arguments.mjs';
 const state={connected:true,context:{pageId:'1:1',selection:[{id:'1:2',type:'RECTANGLE'}]}};
 function fixture() {
   let writes=0, paints=[{type:'SOLID',color:{r:0,g:0,b:0},opacity:0.4,blendMode:'NORMAL',visible:true}];
-  const target={id:'1:2',type:'RECTANGLE',parent:{type:'FRAME',parent:{type:'PAGE'}},get fills(){return paints;},set fills(value){writes++;paints=value;}};
+  const target={id:'1:2',type:'RECTANGLE',parent:{type:'FRAME',parent:{id:'1:1',type:'PAGE'}},get fills(){return paints;},set fills(value){writes++;paints=value;}};
   const figma={currentPage:{id:'1:1',selection:[target]}};
   const run=()=>new Function('figma','target','return (async()=>{'+selectedFillEdit(state,'#3366fF').code+'})()')(figma,target);
   return {target,figma,run,writes:()=>writes,setPaints:value=>{paints=value;}};
