@@ -63,7 +63,7 @@ Agent 会给你一个插件配置文件的位置，并带你完成这几步：
 
 这样复制的是所选画板的链接，Agent 才知道你要改哪一块。
 
-![右键菜单中选择 Copy/Paste as，再点击 Copy link to selection 复制画板链接](assets/copy-selection-link.png)
+<img src="assets/copy-selection-link.png" alt="右键菜单中选择 Copy/Paste as，再点击 Copy link to selection 复制画板链接" width="520">
 
 ### 3. 开始许愿、看成果
 
