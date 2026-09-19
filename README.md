@@ -1,5 +1,10 @@
 # local-figma
 
+![阶段：Alpha](https://img.shields.io/badge/status-alpha-orange)
+![Node.js：22 及以上](https://img.shields.io/badge/node-%3E%3D22-339933)
+![首版范围：macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
+[![许可证：Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 **用说话的方式，让 AI 帮你修改 Figma 设计稿。**
 
 ![local-figma：说出需求，改好设计](assets/product-hero.png)
