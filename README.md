@@ -3,6 +3,7 @@
 ![阶段：Alpha](https://img.shields.io/badge/status-alpha-orange)
 ![Node.js：22 及以上](https://img.shields.io/badge/node-%3E%3D22-339933)
 ![首版范围：macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
+[![许可证：Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 让你的 Agent 在本机读取、修改和验证原生 Figma 设计稿。
 
@@ -167,7 +168,7 @@ npm test
 
 测试覆盖真实 CLI、回环 HTTP、插件代码模拟、故障注入、输出合同与 tarball 隔离安装。Figma API 使用模拟对象的测试无法证明真实文档行为。Ajv 为开发测试依赖，终端用户安装无需该依赖。
 
-已配置 macOS 上的 Node.js 22/24 CI，采用手动触发；完整回归须经维护者确认，普通推送不会自动运行全套。尚未进行首次远程运行。测试通过徽章仅在核实远程工作流结果后接入；当前未展示下载量、覆盖率或许可证徽章。徽章格式参考 [GitHub 官方说明](https://docs.github.com/en/actions/how-tos/monitor-workflows/add-a-status-badge) 和 [Shields.io](https://shields.io/docs/static-badges)。
+已配置 macOS 上的 Node.js 22/24 CI，采用手动触发；完整回归须经维护者确认，普通推送不会自动运行全套。尚未进行首次远程运行。测试通过徽章仅在核实远程工作流结果后接入；当前展示与 LICENSE 一致的静态许可证徽章，未展示下载量或覆盖率。徽章格式参考 [GitHub 官方说明](https://docs.github.com/en/actions/how-tos/monitor-workflows/add-a-status-badge) 和 [Shields.io](https://shields.io/docs/static-badges)。
 
 已有一次真实桌面验收，覆盖原生文字、Auto Layout、三行截断、局部修改、截图及单字段故障恢复；验证边界见 [桌面验收记录](docs/desktop-acceptance.md)。
 
