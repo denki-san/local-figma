@@ -1,8 +1,8 @@
 # local-figma
 
-让 Agent 在本机读取、修改和验证原生 Figma 设计稿。CLI、localhost 桥接和 Figma Development Plugin 协同工作；产物保留可编辑的文字、图层和组件，不需要托管服务。
+让 Agent 在本机读取、修改和验证原生 Figma 设计稿。CLI、localhost 桥接和 Figma Development Plugin 协同工作；产物保留可编辑的文字、图层和组件。
 
-当前版本为 [v0.1.0-alpha.1](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1)，支持 macOS、Node.js 22+ 和 Figma Desktop。首次需在 Figma 中导入并运行开发插件。GitHub Release 提供安装包，尚未发布 npm。
+当前版本为 [v0.1.0-alpha.1](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.1)，支持 macOS、Node.js 22+ 和 Figma Desktop。安装包在 GitHub Release 下载；首次按提示在 Figma 中导入并运行开发插件。
 
 ![本地工具生成的原生 Figma 页面，使用合成演示数据](assets/preview.png)
 
@@ -29,29 +29,15 @@ figma-local help
 
 - 已有稿精修：读取选区、当前样式和组件，修改文字、字体、填充、布局、对齐与实例属性，再读回并预览。
 - 从零设计：按需求、参考和已有设计语言生成原生图层；Agent 负责整理任务资料，用户确认设计方向与成果。
-- Design to Code / Code to Design：针对给定页面逐页实现、对照与修正；当前没有通用自动双向同步。
+- Design to Code / Code to Design：Agent 针对给定页面逐页制作、对照并调整 Figma 稿与可运行页面。
 - 交互原型：建立简单点击跳转，并在 Figma 中检查实际路径。
 
 `inspect`、`preview`、`run`、`result`、`diff`、`validate`、`history`、`doctor` 等命令用于限定目标、执行及留存证据。完整命令以 `figma-local help` 为准。[五种任务提示](docs/first-task.md)、[输出协议](docs/protocol.md)与[读取覆盖](docs/inspect-coverage.md)供 Agent 和开发者查阅。
 
-## 当前限制
+## 使用提示
 
-- 首版只验证了 macOS、单文件和单个写入 Agent。首次需要明确的 Figma 链接及手动导入 Development Plugin。
-- JavaScript 脚本拥有插件环境允许的能力；只运行可信、已审阅的本地代码。目标检查无法充当恶意脚本沙箱。
-- 修改前快照和局部 diff 不能完整恢复文档，也不能证明目标范围外没有变化。超时或断连后先核查原任务和文档，避免重放脚本。
-- 五种任务已有范围不同的案例验证，尚不能保证任意输入的视觉还原、长期稳定性或完整交互。详情见[版本说明](docs/releases/v0.1.0-alpha.1.md)。
-- 本地 `.figma-agent/` 可能包含设计内容、脚本和截图，默认不进入 Git；分享前请检查并脱敏。
+首次提供含 `node-id` 的 Figma 链接，并在目标文件运行开发插件。Agent 会按任务读取设计、局部修改、查看结果与截图；你负责确认最终效果。连接中断时，先让 Agent 核对原任务结果和画布状态，再继续操作。
 
-安全边界见 [SECURITY.md](SECURITY.md)。
-
-## 开发
-
-```sh
-npm ci
-npm run check
-npm test
-```
-
-测试代码保留在仓库供维护与贡献使用，安装包不包含 `tests/`。自动化测试不能替代真实 Figma 读回、截图检查和用户验收。[贡献指南](CONTRIBUTING.md)说明提交要求。
+本地证据保存在 `.figma-agent/`，分享前请检查其中的脚本、文字和截图。更多信息见[版本说明](docs/releases/v0.1.0-alpha.1.md)、[安全说明](SECURITY.md)与[贡献指南](CONTRIBUTING.md)。
 
 本项目采用 [Apache-2.0](LICENSE) 许可证。
