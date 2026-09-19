@@ -9,6 +9,12 @@ import { pairingToken, unfinishedOperations } from './session-state.mjs';
 import { isNodeId } from './node-id.mjs';
 
 const assets = fileURLToPath(new URL('../plugin/', import.meta.url));
+function inactiveUi(title, detail) {
+  return `<!doctype html><html lang="zh-CN" data-runtime-inactive><meta charset="utf-8"><style>
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:16px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
+h1{font-size:14px;font-weight:650;margin:0 0 28px}p{margin:0}p[role="status"]{font-size:14px;font-weight:600;margin-bottom:4px}
+</style><h1>local-figma</h1><p role="status">${title}</p><p>${detail}</p></html>`;
+}
 export async function start(cwd, port = 43187, connectionOptions = {}) {
   const dir = root(cwd), binding = await json(path.join(dir, 'binding.json'));
   const lock = await fs.open(path.join(dir, 'bridge.lock'), 'wx', 0o600);
@@ -200,7 +206,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
       catch (cleanupError) { failures.push(cleanupError); }
     }
     if (uiTouched && !connectionOptions.persistentPlugin) {
-      try { await fs.writeFile(path.join(dir, 'plugin/ui.html'), '桥接启动失败。修复后重新 connect。', { mode: 0o600 }); }
+      try { await fs.writeFile(path.join(dir, 'plugin/ui.html'), inactiveUi('连接未启动', '回到 Agent 对话排查，修复后重新运行插件。'), { mode: 0o600 }); }
       catch (cleanupError) { failures.push(cleanupError); }
     }
     await lock.close();
@@ -217,7 +223,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     await Promise.allSettled([...approvals.values()].map(entry => entry.promise));
     if (active) await save(path.join(runDir(active), 'recovery.json'), { status: 'unknown-after-disconnect', instruction: '重新连接后先 inspect，禁止重放脚本' });
     await fs.rm(path.join(dir, 'session.json'), { force: true });
-    if (!connectionOptions.persistentPlugin) await fs.writeFile(path.join(dir, 'plugin', 'ui.html'), '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><p role="status">需要你处理</p><p>桥接已关闭。请让 Agent 重新启动后再运行插件。</p></html>');
+    if (!connectionOptions.persistentPlugin) await fs.writeFile(path.join(dir, 'plugin', 'ui.html'), inactiveUi('连接已断开', '回到 Agent 对话让它重连，再在 Figma 运行插件。'));
     await lock.close(); await fs.unlink(path.join(dir, 'bridge.lock'));
   })();
   return { port, close, manifest: path.join(dir, 'plugin', 'manifest.json') };

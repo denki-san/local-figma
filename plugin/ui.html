@@ -1,14 +1,13 @@
 <!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>
-:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:20px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}h1{font-size:14px;margin:0;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;padding:6px 10px}button:active{transform:scale(.97)}button:focus-visible,summary:focus-visible{outline:2px solid #3478f6;outline-offset:3px}
-.target{border:1px solid var(--figma-color-border,#e5e5e5);border-radius:8px;padding:12px;margin-bottom:16px}.label,small{color:var(--figma-color-text-secondary,#737373)}.label{font-size:11px}.name{font-weight:600;margin:3px 0;overflow-wrap:anywhere}.selection{color:var(--figma-color-text-secondary,#737373);overflow-wrap:anywhere}
-#state{font-size:14px;font-weight:600;margin:0}#state-detail{margin:4px 0 16px;overflow-wrap:anywhere}footer{border-top:1px solid var(--figma-color-border,#e5e5e5);padding-top:12px}h2{font-size:13px}#approval{border-top:1px solid var(--figma-color-border,#ddd);margin-top:16px;padding-top:4px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:160px;overflow:auto;font:11px/1.5 ui-monospace,monospace}summary{cursor:pointer;margin-bottom:8px}#approve{background:#1769e0;color:#fff;border-color:#1769e0}
+:root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:16px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}h1{font-size:14px;margin:0;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;padding:6px 10px}button:active{transform:scale(.97)}button:focus-visible,summary:focus-visible{outline:2px solid #3478f6;outline-offset:3px}
+.target{margin-bottom:20px}.label,.selection{color:var(--figma-color-text-secondary,#737373)}.label{font-size:11px}.name{font-weight:600;margin:2px 0;overflow-wrap:anywhere}.selection{overflow-wrap:anywhere}
+#state{font-size:14px;font-weight:600;margin:0}#state-detail{margin:4px 0 0;overflow-wrap:anywhere}#approval{border-top:1px solid var(--figma-color-border,#ddd);margin-top:20px;padding-top:12px}#approval-reason{margin:0 0 12px;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:160px;overflow:auto;font:11px/1.5 ui-monospace,monospace}summary{cursor:pointer;margin-bottom:8px}#approve{background:#1769e0;color:#fff;border-color:#1769e0}
 </style>
-<header><h1>local-figma</h1><button id="hide-panel">隐藏面板</button></header>
-<section class="target" aria-label="当前目标"><div class="label">目标范围</div><div id="target-name" class="name">正在核对 Agent 绑定的目标…</div><div id="selection-name" class="selection">在目标范围内选择内容即可继续对话</div></section>
-<p id="state" role="status" aria-live="polite">正在重连</p><p id="state-detail">正在建立本机连接。</p>
-<footer><small>回到 Agent 对话描述需求，无需重复发送链接。<br>隐藏后继续连接；关闭插件会断开连接。</small></footer>
-<section id="approval" hidden><h2>需要确认本次修改</h2><p id="approval-reason"></p><details><summary>查看影响范围与脚本</summary><pre id="approval-details"></pre></details><button id="approve">允许本次修改</button> <button id="reject">取消本次修改</button></section>
+<header><h1>local-figma</h1><button id="hide-panel">隐藏</button></header>
+<section class="target" aria-label="当前目标"><div class="label">当前目标</div><div id="target-name" class="name">正在确认…</div><div id="selection-name" class="selection" hidden></div></section>
+<p id="state" role="status" aria-live="polite">正在处理</p><p id="state-detail">正在连接本机服务。</p>
+<section id="approval" hidden><p id="approval-reason"></p><details><summary>查看影响范围与脚本</summary><pre id="approval-details"></pre></details><button id="approve">允许本次修改</button> <button id="reject">取消本次修改</button></section>
 <script>
 const config = SESSION_CONFIG;
 const client = Math.random().toString(36).slice(2) + Date.now();
@@ -26,20 +25,19 @@ function showState(label, detail) {
 }
 function connectionError(message, response) {
   const error = Error(message);
-  error.needsAction = [401,403,409,413].includes(response?.status);
+  error.needsAction = Number.isInteger(response?.status) && response.status >= 400;
   return error;
 }
 function describeConnectionError(error) {
-  if (error?.name === 'TimeoutError' || /signal timed out|timed? ?out|timeout/i.test(error?.message || '')) return '本机连接超时，正在自动重试。';
-  if (/failed to fetch|networkerror|load failed/i.test(error?.message || '')) return '暂时无法连接本机服务，正在自动重试。';
-  return error?.message || '本机连接暂时不可用，正在自动重试。';
+  if (error?.name === 'TimeoutError' || /signal timed out|timed? ?out|timeout|超时/i.test(error?.message || '')) return '连接超时，正在自动恢复。';
+  return '连接暂时中断，正在自动恢复。';
 }
 function showCurrentState() {
-  if (review) showState('需要你处理', '请确认或拒绝本次脚本；五分钟后失效。');
-  else if (lastFailure) showState('需要你处理', String(lastFailure).slice(0,200) + '；请回到 Agent 对话核查，勿重复执行。');
-  else if (busy) showState('执行中', pending ? '正在保存结果，请保持插件运行。' : '任务正在处理，隐藏面板后仍会继续。');
-  else if (targetIssue) showState('需要你处理', targetIssue);
-  else showState('已连接', '可以让 Agent 继续操作当前文件。');
+  if (review) showState('请确认修改', '请在下方选择允许或取消。');
+  else if (lastFailure) showState('任务需检查', '回到 Agent 对话查看结果。');
+  else if (busy) showState('正在处理', pending ? '正在保存结果，请保持插件运行。' : 'Agent 正在处理当前目标。');
+  else if (targetIssue) showState('目标需调整', targetIssue);
+  else showState('已连接', '回到 Agent 对话，直接描述需求。');
 }
 const maxResultBytes = 16 * 1024 * 1024 - 1024;
 const fitsResult = value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxResultBytes;
@@ -69,7 +67,7 @@ async function decide(approved) {
     review = null; document.getElementById('approval').hidden = true;
     parent.postMessage({ pluginMessage: { type: 'approval-ack', id: current.id, channelNonce, approved: decision.approved === true } }, '*');
     showCurrentState();
-  } catch (error) { showState('需要你处理', error.message); }
+  } catch { showState('请确认修改', '确认未保存，请再试一次。'); }
   finally { deciding = false; }
 }
 document.getElementById('approve').onclick = () => decide(true);
@@ -85,7 +83,9 @@ window.onmessage = async event => {
   if (contextNonce && message?.type === 'context-update' && message.contextNonce === contextNonce) {
     pendingContext = message.context;
     const selected = message.context?.selection || [];
-    document.getElementById('selection-name').textContent = selected.length === 1 ? '当前选中：' + selected[0].name : selected.length ? '当前选中 ' + selected.length + ' 项' : '尚未选择内容，可直接在对话中描述需求';
+    const selectionName = document.getElementById('selection-name');
+    selectionName.hidden = selected.length === 0;
+    selectionName.textContent = selected.length === 1 ? '已选：' + selected[0].name : selected.length ? '已选 ' + selected.length + ' 项' : '';
     return;
   }
   if (contextNonce && message?.type === 'target-info' && message.contextNonce === contextNonce) {
@@ -154,7 +154,7 @@ setInterval(async () => {
       if (response.ok && pendingContext === current) pendingContext = null;
     }
     showCurrentState();
-  } catch (error) { showState(error.needsAction ? '需要你处理' : '正在重连', '已有任务不会重新执行。' + describeConnectionError(error)); }
+  } catch (error) { showState(error.needsAction ? '连接需检查' : '正在恢复连接', error.needsAction ? '请保持插件运行，回到 Agent 对话检查。' : describeConnectionError(error)); }
   finally { polling = false; }
 }, 750);
 </script></html>

@@ -1,4 +1,4 @@
-figma.showUI(__html__, { width: 340, height: 360, themeColors: true });
+figma.showUI(__html__, { width: 340, height: __html__.includes('data-runtime-inactive') ? 170 : 280, themeColors: true });
 let busy = false;
 let checkpointWaiter = null;
 let approvalWaiter = null;

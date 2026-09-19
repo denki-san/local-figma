@@ -4,6 +4,15 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await fs.readFile(new URL('../plugin/main.js', import.meta.url), 'utf8');
+test('停机页缩小窗口，常驻面板保留确认区空间', () => {
+  for (const [html, height] of [['', 280], ['<html data-runtime-inactive>', 170]]) {
+    let size;
+    vm.runInNewContext(source, { figma: { showUI: (_, options) => { size = options; }, ui: {} }, __html__: html, setTimeout, clearTimeout });
+    assert.equal(size.width, 340);
+    assert.equal(size.height, height);
+    assert.equal(size.themeColors, true);
+  }
+});
 test('大结果以字符串跨宿主传递，避免大量数字数组逐项转换', async () => {
   const f = fixture();
   await f.run('return Array.from({length: 40000}, (_, i) => i % 256);');

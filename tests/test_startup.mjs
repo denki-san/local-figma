@@ -19,7 +19,11 @@ test('manifest 保存失败清除已生成的 UI 凭证，修复后可直接重�
   await fs.mkdir(manifest, { recursive: true });
   await assert.rejects(start(cwd, 0));
   const ui = await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8');
-  assert.equal(ui, '桥接启动失败。修复后重新 connect。');
+  assert.match(ui, /data-runtime-inactive/);
+  assert.match(ui, /role="status">连接未启动/);
+  assert.match(ui, /修复后重新运行插件/);
+  assert.match(ui, /var\(--figma-color-text/);
+  assert(!ui.includes('X-Session-Token'));
   await assert.rejects(fs.access(path.join(dir, 'bridge.lock')));
   await assert.rejects(fs.access(path.join(dir, 'session.json')));
   await fs.rmdir(manifest);
@@ -27,8 +31,9 @@ test('manifest 保存失败清除已生成的 UI 凭证，修复后可直接重�
   await Promise.all([bridge.close(), bridge.close(), bridge.close()]);
   await bridge.close();
   const stoppedUi = await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8');
-  assert.match(stoppedUi, /role="status">需要你处理/);
-  assert.match(stoppedUi, /桥接已关闭/);
+  assert.match(stoppedUi, /role="status">连接已断开/);
+  assert.match(stoppedUi, /回到 Agent 对话让它重连，再在 Figma 运行插件/);
+  assert.match(stoppedUi, /var\(--figma-color-text/);
   assert(!stoppedUi.includes('X-Session-Token'));
   await assert.rejects(fs.access(path.join(dir, 'bridge.lock')));
 });
@@ -51,6 +56,6 @@ test('启动清理失败保留锁、停止监听并给出明确错误', async t 
   await fs.mkdir(path.join(dir, 'session.json'));
   await assert.rejects(start(cwd, 0), error => error instanceof AggregateError && error.message.includes('保留锁'));
   assert.equal(await fs.readFile(path.join(dir, 'bridge.lock'), 'utf8'), String(process.pid));
-  assert.equal(await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8'), '桥接启动失败。修复后重新 connect。');
+  assert.match(await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8'), /role="status">连接未启动/);
   await assert.rejects(start(cwd, 0), { code: 'EEXIST' });
 });

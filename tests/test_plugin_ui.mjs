@@ -5,6 +5,12 @@ import vm from 'node:vm';
 import crypto from 'node:crypto';
 
 const html = await fs.readFile(new URL('../plugin/ui.html', import.meta.url), 'utf8');
+test('常驻面板仅保留目标、状态和按需确认，隐藏重复说明', () => {
+  assert.match(html, /当前目标/);
+  assert.match(html, /id="selection-name" class="selection" hidden/);
+  assert.doesNotMatch(html, /<footer>/);
+  assert.doesNotMatch(html, /目标范围/);
+});
 function fixture() {
   const calls = [], deliveries = [], responses = [];
   const state = { textContent: '' };
@@ -37,9 +43,12 @@ test('轻量面板显示已核对目标与选区，拒绝旧握手覆盖', async
   await f.complete({type:'target-info',contextNonce:'old',name:'错误目标'});
   assert.equal(f.element('target-name').textContent,'目标卡片');
   await f.complete({type:'context-update',contextNonce,context:{selection:[{name:'标题'}]}});
-  assert.equal(f.element('selection-name').textContent,'当前选中：标题');
+  assert.equal(f.element('selection-name').textContent,'已选：标题');
+  assert.equal(f.element('selection-name').hidden,false);
+  await f.complete({type:'context-update',contextNonce,context:{selection:[]}});
+  assert.equal(f.element('selection-name').hidden,true);
   await f.complete({type:'target-info',contextNonce,name:'目标卡片',issue:'选区超出范围'});
-  await f.tick();assert.equal(f.state.textContent,'需要你处理');
+  await f.tick();assert.equal(f.state.textContent,'目标需调整');
   assert.equal(f.element('state-detail').textContent,'选区超出范围');
 });
 test('连接后自动请求上下文，仅接受本次握手并提交最新选择', async () => {
@@ -125,7 +134,7 @@ test('结果回传超时保留结果，下轮重试回传且不重新执行', as
   f.complete({ id: 'one', ok: false, error: '部分失败' });
   f.responses.push({}, Error('超时'));
   await f.tick();
-  assert.equal(f.state.textContent, '正在重连');
+  assert.equal(f.state.textContent, '正在恢复连接');
   assert.match(f.element('state-detail').textContent, /超时/);
   await f.tick();
   const sends = f.calls.filter(c => c.url.endsWith('/complete'));
@@ -133,6 +142,19 @@ test('结果回传超时保留结果，下轮重试回传且不重新执行', as
   assert.equal(sends[0].options.body, sends[1].options.body);
   assert.equal(f.deliveries.length, 1);
   assert(f.calls.every(c => c.options.signal));
+});
+test('结果回传收到 HTTP 400 时提示 Agent 检查并保留原任务', async () => {
+  const f = fixture();
+  f.responses.push({ body: { id: 'one', operation: 'run' } }); await f.tick();
+  await f.complete({ id: 'one', ok: true, output: '完成' });
+  f.responses.push({}, { ok: false, status: 400 }); await f.tick();
+  assert.equal(f.state.textContent, '连接需检查');
+  assert.match(f.element('state-detail').textContent, /保持插件运行，回到 Agent 对话检查/);
+  await f.tick();
+  const sends = f.calls.filter(c => c.url.endsWith('/complete'));
+  assert.equal(sends.length, 2);
+  assert.equal(sends[0].options.body, sends[1].options.body);
+  assert.equal(f.deliveries.length, 1);
 });
 test('超大输出、PNG 和快照转为有界失败证据，保留执行状态且不重放', async () => {
   const cases = [
@@ -171,23 +193,23 @@ test('永久 413 不重复发送同一大结果，下一轮只保存精简失败
   assert.equal(f.deliveries.length, 1);
 });
 
-test('面板四态区分正常连接、执行、断线重连与凭证处理', async () => {
+test('面板区分可用、处理中、自动恢复和需要检查', async () => {
   const f = fixture();
   await f.tick();
   assert.equal(f.state.textContent, '已连接');
   f.responses.push(Error('Failed to fetch'));
   await f.tick();
-  assert.equal(f.state.textContent, '正在重连');
+  assert.equal(f.state.textContent, '正在恢复连接');
   assert.equal(f.deliveries.length, 0);
-  assert.match(f.element('state-detail').textContent, /暂时无法连接本机服务/);
+  assert.match(f.element('state-detail').textContent, /正在自动恢复/);
   assert.doesNotMatch(f.element('state-detail').textContent, /Failed to fetch/);
   f.responses.push({ ok: false, status: 401 });
   await f.tick();
-  assert.equal(f.state.textContent, '需要你处理');
+  assert.equal(f.state.textContent, '连接需检查');
   assert.equal(f.deliveries.length, 0);
   f.responses.push({ body: { id: 'one', operation: 'run' } });
   await f.tick();
-  assert.equal(f.state.textContent, '执行中');
+  assert.equal(f.state.textContent, '正在处理');
   assert.equal(f.deliveries.length, 1);
 });
 
@@ -196,14 +218,14 @@ test('任务失败保存后持续显示待处理，新任务才清除旧错误',
   f.responses.push({ body: { id: 'one', operation: 'run' } }); await f.tick();
   await f.complete({ id: 'one', ok: false, error: '字体未找到' });
   await f.tick();
-  assert.equal(f.state.textContent, '需要你处理');
-  assert.match(f.element('state-detail').textContent, /字体未找到/);
+  assert.equal(f.state.textContent, '任务需检查');
+  assert.equal(f.element('state-detail').textContent, '回到 Agent 对话查看结果。');
   await f.tick();
-  assert.equal(f.state.textContent, '需要你处理');
+  assert.equal(f.state.textContent, '任务需检查');
   assert.equal(f.deliveries.length, 1);
   f.responses.push({ body: { id: 'two', operation: 'inspect' } });
   await f.tick();
-  assert.equal(f.state.textContent, '执行中');
+  assert.equal(f.state.textContent, '正在处理');
   assert.doesNotMatch(f.element('state-detail').textContent, /字体未找到/);
 });
 
@@ -211,20 +233,20 @@ test('高风险确认立即展示待处理，断线不自动提交决定', async
   const f = fixture();
   f.responses.push({ body: { id: 'one' } }); await f.tick();
   await f.complete({ type: 'approval-request', id: 'one', reason: '测试', scriptHash: 'hash', code: 'return 1;', binding: { fileKey: 'example', nodeId: '1:2' } });
-  assert.equal(f.state.textContent, '需要你处理');
+  assert.equal(f.state.textContent, '请确认修改');
   f.responses.push(Error('连接中断')); await f.tick();
-  assert.equal(f.state.textContent, '正在重连');
+  assert.equal(f.state.textContent, '正在恢复连接');
   assert.equal(f.element('approval').hidden, false);
   assert.equal(f.calls.filter(c => c.url.endsWith('/approve')).length, 0);
   await f.tick();
-  assert.equal(f.state.textContent, '需要你处理');
+  assert.equal(f.state.textContent, '请确认修改');
 });
 
 test('宿主超时文案统一中文，同时保留重连状态', async () => {
   const f = fixture();
   const error = Error('signal timed out'); error.name = 'TimeoutError';
   f.responses.push(error); await f.tick();
-  assert.equal(f.state.textContent, '正在重连');
-  assert.match(f.element('state-detail').textContent, /本机连接超时/);
+  assert.equal(f.state.textContent, '正在恢复连接');
+  assert.match(f.element('state-detail').textContent, /连接超时/);
   assert.doesNotMatch(f.element('state-detail').textContent, /signal timed out/);
 });
