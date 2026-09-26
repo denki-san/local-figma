@@ -71,3 +71,29 @@ test('拒绝替换插件不会刷新过期租约或改变原插件身份', () =>
   assert.equal(connection.touch('original', true).ok, true);
   assert.equal(connection.owns('original'), true);
 });
+
+test('隐藏插件使用有限后台租约，恢复可见后回到前台租约', () => {
+  let clock = 0;
+  const connection = createConnection({ now: () => clock, timeoutMs: 15000, backgroundTimeoutMs: 90000 });
+  assert.equal(connection.touch('plugin', false, 'visible').ok, true);
+  assert.equal(connection.state, 'ACTIVE');
+  clock = 1000;
+  assert.equal(connection.touch('plugin', false, 'hidden').ok, true);
+  clock = 61000;
+  assert.equal(connection.connected, true);
+  assert.equal(connection.state, 'BACKGROUND');
+  assert.equal(connection.ageMs, 60000);
+  assert.equal(connection.owns('plugin'), true);
+  clock = 90999;
+  assert.equal(connection.state, 'BACKGROUND');
+  assert.equal(connection.touch('plugin', false, 'visible').ok, true);
+  assert.equal(connection.state, 'ACTIVE');
+  assert.equal(connection.touch('replacement', false, 'visible').code, 'CONNECTION_IN_USE');
+  connection.touch('plugin', false, 'hidden');
+  clock += 90000;
+  assert.equal(connection.connected, false);
+  assert.equal(connection.state, 'STALE');
+  assert.equal(connection.owns('plugin'), false);
+  assert.equal(connection.touch('replacement', false, 'visible').ok, true);
+  assert.equal(connection.touch('plugin', false, 'visible').code, 'RETIRED_CLIENT');
+});
