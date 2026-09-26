@@ -15,6 +15,8 @@ function fixture() {
   const calls = [], deliveries = [], responses = [];
   const state = { textContent: '' };
   const elements = new Map([['state', state]]);
+  const document = { visibilityState: 'visible' };
+  let visibilityChange;
   const element = id => {
     if (!elements.has(id)) {
       const value = { value: '', appendChild(option) { if (!this.value) this.value = option.value; } };
@@ -28,20 +30,48 @@ function fixture() {
   const parent = { postMessage: message => (message.pluginMessage.type === 'context-request' ? contexts : deliveries).push(message) };
   const window = {};
   vm.runInNewContext(html.match(/<script>([\s\S]*)<\/script>/)[1].replace('SESSION_CONFIG', JSON.stringify({ port: 1234, token: 'test' })), {
-    parent, window, crypto: { getRandomValues: values => crypto.getRandomValues(values) }, document: { getElementById: element, createElement: () => ({}) },
+    parent, window, crypto: { getRandomValues: values => crypto.getRandomValues(values) }, document: Object.assign(document, { getElementById: element, createElement: () => ({}), addEventListener: (name, callback) => { if (name === 'visibilitychange') visibilityChange = callback; } }),
     AbortSignal, TextEncoder, setInterval: callback => { tick = callback; },
     fetch: async (url, options) => {
       calls.push({ url, options });
-      const response = responses.shift();
+      const response = await responses.shift();
       if (response instanceof Error) throw response;
       return { ok: response?.ok ?? true, status: response?.status ?? 200, headers: { get: () => response?.session ?? null }, json: async () => response?.body ?? null };
     }
   });
   return { calls, deliveries, contexts, responses, tick: () => tick(), state, element,
+    visibilityChange: async visibility => { document.visibilityState = visibility; await visibilityChange?.(); },
     complete: (message, source = parent) => window.onmessage({ source, data: { pluginMessage: {
       channelNonce: deliveries[0]?.pluginMessage.channelNonce, ...message
-    } } }) };
+  } } }) };
 }
+test('插件隐藏时立即报告后台状态，恢复后心跳携带前台状态', async () => {
+  const f = fixture();
+  await f.visibilityChange('hidden');
+  assert.equal(f.calls.length, 1);
+  assert.match(f.calls[0].url, /\/heartbeat\?client=.*&visibility=hidden$/);
+  f.responses.push({ body: { id: 'one' } });
+  await f.tick();
+  await f.visibilityChange('visible');
+  assert.match(f.calls.at(-1).url, /\/heartbeat\?client=.*&visibility=visible$/);
+  await f.tick();
+  assert.match(f.calls.at(-1).url, /\/heartbeat\?client=.*&visibility=visible$/);
+});
+test('轮询进行时的可见性变化排队串行发送最新状态心跳', async () => {
+  const f = fixture();
+  let releasePoll;
+  f.responses.push(new Promise(resolve => { releasePoll = resolve; }));
+  const tick = f.tick();
+  await f.visibilityChange('hidden');
+  await f.visibilityChange('visible');
+  assert.equal(f.calls.length, 1);
+  assert.match(f.calls[0].url, /\/poll\?client=.*&visibility=visible$/);
+  releasePoll({ body: null });
+  await tick;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.calls.filter(call => call.url.includes('/heartbeat?')).length, 1);
+  assert.match(f.calls.at(-1).url, /\/heartbeat\?client=.*&visibility=visible$/);
+});
 test('保存第二个扩展后保留选中项，随后清除操作仍指向同一扩展', async () => {
   const f = fixture();
   const extensions = [{ id: 'first', name: '第一个', enabled: false }, { id: 'second', name: '第二个', enabled: false }];
