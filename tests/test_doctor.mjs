@@ -55,3 +55,26 @@ test('doctor 实时验证连接、会话身份、认证和忙碌状态', async t
   await save(path.join(dir, 'session.json'), session);
   assert.equal((await doctor(cwd)).checks.find(c => c.code === 'BRIDGE_UNREACHABLE').status, 'error');
 });
+
+test('doctor 将有效后台连接标为提醒，租约过期后才报错', async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_figma_doctor_background_'));
+  await init(cwd, 'https://figma.com/design/example/Test?node-id=1-2');
+  let clock = 0;
+  const bridge = await start(cwd, 0, { now: () => clock });
+  t.after(async () => { await bridge.close(); await fs.rm(cwd, { recursive: true, force: true }); });
+  const ui = await fs.readFile(path.join(cwd, '.figma-agent/plugin/ui.html'), 'utf8');
+  const plugin = JSON.parse(ui.match(/const config = (.*);/)[1]);
+  clock = 1000;
+  const heartbeat = await fetch(`http://127.0.0.1:${bridge.port}/heartbeat?client=test&visibility=hidden`, {
+    headers: { 'X-Session-Token': plugin.token }
+  });
+  assert.equal(heartbeat.status, 200);
+  clock = 61000;
+  let report = await doctor(cwd);
+  assert.equal(report.ready, true);
+  assert.equal(report.checks.find(c => c.code === 'PLUGIN_CONNECTION').status, 'warning');
+  clock = 91000;
+  report = await doctor(cwd);
+  assert.equal(report.ready, false);
+  assert.equal(report.checks.find(c => c.code === 'PLUGIN_CONNECTION').status, 'error');
+});
