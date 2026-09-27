@@ -7,8 +7,9 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
-import { save } from '../src/project.mjs';
-import { waitForResult } from '../src/wait.mjs';
+import { init, json, save } from '../src/project.mjs';
+import { start } from '../src/bridge.mjs';
+import { isBackgroundConnection, waitForResult } from '../src/wait.mjs';
 import { parseArguments } from '../src/arguments.mjs';
 import { localResult } from '../src/evidence.mjs';
 
@@ -81,4 +82,35 @@ test('wait 超时参数与任务 ID 严格校验，缺失证据保持错误', as
   const dir = path.join(cwd, '.figma-agent/runs', id);
   await save(path.join(dir, 'result.json'), { id, ok: 'true' });
   await assert.rejects(waitForResult(cwd, id, 1), /结果状态无效/);
+});
+
+test('默认等待只对当前会话的有效后台连接启用延长条件', async t => {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_figma_wait_background_'));
+  await init(cwd, 'https://figma.com/design/example/Test?node-id=1-2');
+  let clock = 0;
+  const bridge = await start(cwd, 0, { now: () => clock });
+  t.after(async () => { await bridge.close(); await fs.rm(cwd, { recursive: true, force: true }); });
+  const sessionFile = path.join(cwd, '.figma-agent/session.json');
+  const session = await json(sessionFile);
+  const ui = await fs.readFile(path.join(cwd, '.figma-agent/plugin/ui.html'), 'utf8');
+  const plugin = JSON.parse(ui.match(/const config = (.*);/)[1]);
+  assert.equal(await isBackgroundConnection(cwd, id), false);
+  clock = 1000;
+  const heartbeat = await fetch(`http://127.0.0.1:${bridge.port}/heartbeat?client=test&visibility=hidden`, {
+    headers: { 'X-Session-Token': plugin.token }
+  });
+  assert.equal(heartbeat.status, 200);
+  const submitted = await fetch(`http://127.0.0.1:${bridge.port}/job`, {
+    method: 'POST', headers: { 'X-Session-Token': session.token }, body: JSON.stringify({ operation: 'inspect' })
+  });
+  assert.equal(submitted.status, 202);
+  const job = await submitted.json();
+  clock = 61000;
+  assert.equal(await isBackgroundConnection(cwd, id), false);
+  assert.equal(await isBackgroundConnection(cwd, job.id), true);
+  await save(sessionFile, { ...session, sessionId: '另一会话' });
+  assert.equal(await isBackgroundConnection(cwd, job.id), false);
+  await save(sessionFile, session);
+  clock = 91000;
+  assert.equal(await isBackgroundConnection(cwd, job.id), false);
 });

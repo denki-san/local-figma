@@ -124,3 +124,49 @@ test('桥接认证、断连拒绝、一次交付、证据和退出清理', async
   assert.equal((await json(path.join(dir, 'runs', job.id, 'result.json'))).ok, true);
   assert.equal((await json(server.manifest)).enablePrivatePluginApi, true);
 });
+
+test('隐藏时持续约 60 秒间隔仍为后台连接，状态读取只读且可恢复', async t => {
+  let clock = 0;
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'test_figma_hidden_lease_'));
+  await init(cwd, 'https://figma.com/design/abc/Test?node-id=1-2');
+  const server = await start(cwd, 0, { now: () => clock });
+  t.after(async () => { await server.close(); await fs.rm(cwd, { recursive: true, force: true }); });
+  const dir = path.join(cwd, '.figma-agent');
+  const session = await json(path.join(dir, 'session.json'));
+  const html = await fs.readFile(path.join(dir, 'plugin/ui.html'), 'utf8');
+  const plugin = JSON.parse(html.match(/const config = (.*);/)[1]);
+  const call = async (route, token = plugin.token) => {
+    const response = await fetch(`http://127.0.0.1:${server.port}${route}`, { headers: { 'X-Session-Token': token } });
+    return { status: response.status, body: await response.json() };
+  };
+  const status = async () => (await call('/status', session.token)).body;
+
+  await call('/poll?client=plugin&visibility=visible');
+  assert.equal((await status()).connectionState, 'ACTIVE');
+  clock = 1000;
+  await call('/heartbeat?client=plugin&visibility=hidden');
+  clock = 61000;
+  let state = await status();
+  assert.equal(state.connected, true);
+  assert.equal(state.connectionState, 'BACKGROUND');
+  assert.equal(state.pollAgeMs, 60000);
+  await call('/poll?client=plugin&visibility=hidden');
+  clock = 121000;
+  state = await status();
+  assert.equal(state.connected, true);
+  assert.equal(state.connectionState, 'BACKGROUND');
+  assert.equal(state.pollAgeMs, 60000);
+  assert.equal((await call('/heartbeat?client=plugin&visibility=visible', 'invalid')).status, 403);
+  assert.equal((await status()).pollAgeMs, 60000);
+  assert.equal((await call('/heartbeat?client=plugin&visibility=visible')).status, 200);
+  assert.equal((await status()).connectionState, 'ACTIVE');
+  await call('/heartbeat?client=plugin&visibility=hidden');
+  clock += 90000;
+  state = await status();
+  assert.equal(state.connected, false);
+  assert.equal(state.connectionState, 'STALE');
+  assert.equal((await call('/poll?client=plugin&visibility=visible')).status, 200);
+  state = await status();
+  assert.equal(state.connected, true);
+  assert.equal(state.connectionState, 'ACTIVE');
+});

@@ -22,7 +22,7 @@ figma-local connect
 ```sh
 figma-local doctor
 figma-local inspect
-figma-local wait TASK_ID --timeout 30
+figma-local wait TASK_ID
 figma-local result TASK_ID
 figma-local preview
 ```

@@ -24,9 +24,14 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 <script>
 const config = SESSION_CONFIG;
 const client = Math.random().toString(36).slice(2) + Date.now();
+function connectionRoute(route) {
+  const visibility = document.visibilityState === 'hidden' ? 'hidden' : 'visible';
+  return route + '?client=' + client + '&visibility=' + visibility;
+}
 const headers = { 'Content-Type': 'application/json', 'X-Session-Token': config.token };
 document.getElementById('hide-panel').onclick = () => parent.postMessage({ pluginMessage: { type: 'hide-ui' } }, '*');
 let pending = null, busy = false, polling = false, activeId = null;
+let visibilitySignalPending = false;
 let channelNonce = null;
 let contextNonce = null, pendingContext = null;
 let serverSessionId = null, contextReady = false;
@@ -218,12 +223,31 @@ window.onmessage = async event => {
     review = null; document.getElementById('approval').hidden = true;
   }
 };
+async function reportVisibility() {
+  if (polling) {
+    visibilitySignalPending = true;
+    return;
+  }
+  visibilitySignalPending = false;
+  polling = true;
+  try {
+    const response = await request(connectionRoute('/heartbeat'));
+    if (!response.ok) throw connectionError('心跳失败，请检查桥接；保留当前任务，禁止重放', response);
+  } catch (error) {
+    showState(error.needsAction ? '连接需检查' : '正在恢复连接', error.needsAction ? '请保持插件运行，回到 Agent 对话检查。' : describeConnectionError(error));
+  } finally {
+    polling = false;
+    if (visibilitySignalPending) void reportVisibility();
+  }
+}
+document.addEventListener('visibilitychange', reportVisibility);
+if (document.visibilityState === 'hidden') void reportVisibility();
 setInterval(async () => {
   if (polling) return;
   polling = true;
   try {
     if (busy) {
-      const heartbeat = await request('/heartbeat?client=' + client);
+      const heartbeat = await request(connectionRoute('/heartbeat'));
       if (!heartbeat.ok) throw connectionError('心跳失败，请检查桥接；保留当前任务，禁止重放', heartbeat);
     }
     if (pending) {
@@ -239,7 +263,7 @@ setInterval(async () => {
     if (!busy) {
       // getRandomValues 可用于桌面插件的非安全 iframe；在领取任务前生成凭证。
       const nextNonce = randomNonce();
-      const response = await request('/poll?client=' + client);
+      const response = await request(connectionRoute('/poll'));
       if (!response.ok) throw connectionError('连接尚未恢复，请让 Agent 检查本机服务；保留当前任务', response);
       const job = await response.json();
       if (!contextNonce) {
@@ -255,6 +279,9 @@ setInterval(async () => {
     }
     showCurrentState();
   } catch (error) { showState(error.needsAction ? '连接需检查' : '正在恢复连接', error.needsAction ? '请保持插件运行，回到 Agent 对话检查。' : describeConnectionError(error)); }
-  finally { polling = false; }
+  finally {
+    polling = false;
+    if (visibilitySignalPending) void reportVisibility();
+  }
 }, 750);
 </script></html>

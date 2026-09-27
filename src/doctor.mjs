@@ -73,9 +73,12 @@ export async function doctor(cwd) {
       return report();
     }
     add('BRIDGE', 'ok', '实时桥接认证与目标配置匹配');
+    const background = status.connected === true && status.connectionState === 'BACKGROUND';
     const fresh = status.connected === true && Number.isFinite(status.pollAgeMs) && status.pollAgeMs >= 0 && status.pollAgeMs < 5000;
-    add('PLUGIN_CONNECTION', fresh ? 'ok' : 'error', fresh ? '插件具有新鲜轮询' : '插件没有新鲜轮询',
-      status.active ? '有未完成任务，先读取 result 并检查 Figma；返回编辑标签页，保留运行中的插件，禁止盲目重放' : '先返回 Figma 编辑标签页检查心跳；原型预览或后台节流可能暂停轮询。仍未连接时核对当前 manifest；仅在桥接确实重启后重开插件');
+    add('PLUGIN_CONNECTION', background ? 'warning' : fresh ? 'ok' : 'error',
+      background ? '插件在后台连接，轮询和任务结果可能延迟' : fresh ? '插件具有新鲜轮询' : '插件没有新鲜轮询',
+      background ? '需要即时执行时返回 Figma 编辑页；等待后台任务时保留原任务 ID，禁止重放' :
+        status.active ? '有未完成任务，先读取 result 并检查 Figma；返回编辑标签页，保留运行中的插件，禁止盲目重放' : '先返回 Figma 编辑标签页检查心跳；原型预览或后台节流可能暂停轮询。仍未连接时核对当前 manifest；仅在桥接确实重启后重开插件');
     if (status.active) add('ACTIVE_JOB', 'error', '存在未完成任务，暂不可提交新任务', '用 status 获取任务 ID，再用 result 查看证据；超时后先读回文档');
     if (status.unresolved?.length) add('UNRESOLVED_JOB', 'error', '旧操作需要核验；当前可执行只读检查', '确认旧插件已停止，独立 inspect 后用 resolve 结束等待；原任务保持不重放');
   } catch {

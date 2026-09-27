@@ -57,7 +57,7 @@ test('真实 CLI、HTTP、插件 UI 与执行器贯通；文档 API 使用明确
   };
   vm.runInNewContext(main, { figma, __html__: html, setTimeout, clearTimeout });
   vm.runInNewContext(html.match(/<script>([\s\S]*)<\/script>/)[1], {
-    window, parent, crypto, fetch, AbortSignal, TextEncoder, document: { getElementById: element },
+    window, parent, crypto, fetch, AbortSignal, TextEncoder, document: { visibilityState: 'visible', addEventListener: () => {}, getElementById: element },
     setInterval: callback => { tick = callback; }
   });
   await tick();

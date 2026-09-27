@@ -74,10 +74,10 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
       if (req.headers['x-session-token'] !== tokens[role]) return reply(403, { error: '认证失败' });
       if (req.method === 'GET' && u.pathname === '/extensions') return reply(200, await listExtensions(cwd));
       if (req.method === 'GET' && u.pathname === '/context') return reply(200, { connected: connection.connected, context, stale: !context || !connection.owns(contextOwner) });
-      if (req.method === 'GET' && u.pathname === '/status') return reply(200, { sessionId, connected: connection.connected, pollAgeMs: connection.ageMs, active, unresolved: [...unresolved], binding, jobs: [...jobs.values()].map(j => ({ id: j.id, state: j.state })) });
+      if (req.method === 'GET' && u.pathname === '/status') return reply(200, { sessionId, connected: connection.connected, connectionState: connection.state, pollAgeMs: connection.ageMs, active, unresolved: [...unresolved], binding, jobs: [...jobs.values()].map(j => ({ id: j.id, state: j.state })) });
       if (req.method === 'GET' && ['/poll', '/heartbeat'].includes(u.pathname)) {
         const client = u.searchParams.get('client');
-        const lease = connection.touch(client, active !== null);
+        const lease = connection.touch(client, active !== null, u.searchParams.get('visibility') || 'visible');
         if (!lease.ok) return reply(409, { code: lease.code, error: lease.code === 'OPERATION_UNCERTAIN' ? '需要你处理：上次操作结果尚未确认，已阻止重复执行' : '正在重连', retryable: lease.code === 'CONNECTION_IN_USE' });
         if (u.pathname === '/heartbeat') return reply(200, { connected: true, active });
         const job = active && jobs.get(active);

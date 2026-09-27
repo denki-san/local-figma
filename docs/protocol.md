@@ -11,7 +11,7 @@
 
 包装对象包括 `source`、`evidence`、`result`、`checkpointFile`、`recordedState`、`journalComplete`、`recovery` 和 `instruction`。无结果时 result 为 null；recordedState 来自已保存日志，当前进程活跃性需另查 status。结果与日志落盘中途失败会形成 journalComplete=false，需保留现场并核查，避免重放脚本。
 
-journalComplete 同时要求终态与 ok 一致、job.result 与 result.json 完全一致。`wait <id> [--timeout 30]` 周期读取同一份证据，额外返回 waitStatus：completed、timeout 或 needs-review。默认 30 秒，允许 1–300 秒；等待不调用桥接写接口，不停止或重投原任务。恢复提示未解决时提前返回 needs-review；已有一致终态优先报告 completed，并保留历史恢复提示。
+journalComplete 同时要求终态与 ok 一致、job.result 与 result.json 完全一致。`wait <id> [--timeout <秒>]` 周期读取同一份证据，额外返回 waitStatus：completed、timeout 或 needs-review。默认先等 30 秒；若到期时桥接仍确认插件处于后台连接，自动延长至总计 150 秒，以覆盖后台领取任务和保存结果的两轮轮询。显式 `--timeout` 保持指定的 1–300 秒，不自动延长。等待只读取证据与连接状态，不调用桥接写接口，不停止或重投原任务。恢复提示未解决时提前返回 needs-review；已有一致终态优先报告 completed，并保留历史恢复提示。
 
 持久化结果共有 `id`、`ok`、`finishedAt`。成功的普通结果包含 output、before、after、bindingVerified 和两个 not-run 评审标记；preview 包含 preview.png 的相对文件名、before 与 bindingVerified。失败结果包含字符串 error、executionStarted 和 recovery 提示，可能包含前后结构。
 
