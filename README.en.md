@@ -10,7 +10,7 @@ Share a frame link and your request with an Agent, then review the result as nat
 ![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-![local-figma: Describe what you need, then review the editable design](assets/product-hero.png)
+![local-figma: Describe what you need, then review the editable design](assets/20260928-product-hero-en.png)
 
 ## What do you need?
 
@@ -21,7 +21,7 @@ Share a frame link and your request with an Agent, then review the result as nat
 
 You select a frame, describe the change, and review the result. The Agent uses local-figma to read, edit, and preview the design.
 
-![Workflow: Select a frame and describe your request; the Agent edits it through local-figma and returns a screenshot and change summary](assets/usage-flow.png)
+![Workflow: Select a frame and describe your request; the Agent edits it through local-figma and returns a screenshot and change summary](assets/20260928-usage-flow-en.png)
 
 *The first use requires importing and running a plugin. After that, you can keep refining the same frame through the Agent. Follow these steps to get started.*
 
@@ -42,7 +42,7 @@ If the Agent asks for a frame link during installation, copy one using the next 
 
 **Keep the plugin and the connection process started by the Agent running while you work.**
 
-<img src="assets/plugin-connected.png" alt="Figma Local Runtime plugin showing the connected state" width="420">
+<img src="assets/20260928-plugin-connected-en.png" alt="English translation of the Figma Local Runtime plugin showing the connected state" width="420">
 
 ### 2. Select the frame to edit
 
