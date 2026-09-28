@@ -10,9 +10,9 @@ Share a frame link and your request with an Agent, then review the result as nat
 ![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-![local-figma: Describe what you need, then review the editable design](assets/20260928-product-hero-en.png)
+![local-figma: Describe what you need, then refine the design](assets/20260928-product-hero-en.png)
 
-## What do you need?
+## What do you need before you start?
 
 - **Figma Desktop**: Open a design file you can edit.
 - **An AI assistant that can work on your computer (Agent)**: It needs to install tools, run commands, and inspect images. This guide calls it an Agent.
@@ -21,7 +21,7 @@ Share a frame link and your request with an Agent, then review the result as nat
 
 You select a frame, describe the change, and review the result. The Agent uses local-figma to read, edit, and preview the design.
 
-![Workflow: Select a frame and describe your request; the Agent edits it through local-figma and returns a screenshot and change summary](assets/20260928-usage-flow-en.png)
+![Dark hand-drawn workflow: you select a frame and describe the change; the Agent edits it through local-figma and returns a screenshot and change summary](assets/20260928-usage-flow-dark-en.png)
 
 *The first use requires importing and running a plugin. After that, you can keep refining the same frame through the Agent. Follow these steps to get started.*
 
@@ -33,7 +33,7 @@ Send this message to your Agent:
 
 The Agent will give you the location of the plugin manifest and guide you through these steps:
 
-1. In Figma, open **Plugins → Development → Import plugin from manifest**.
+1. In Figma, find **Plugins → Development → Import plugin from manifest**.
 2. Select the manifest provided by the Agent.
 3. Run **Figma Local Runtime** from the Development plugins menu.
 4. When the plugin shows **“已连接” (Connected)**, return to your conversation with the Agent.
@@ -46,11 +46,11 @@ If the Agent asks for a frame link during installation, copy one using the next 
 
 ### 2. Select the frame to edit
 
-In Figma, select the entire frame you want to edit, then right-click it and choose:
+In Figma, select the entire **Frame** you want to edit, then right-click the frame and choose:
 
 **Copy/Paste as → Copy link to selection**
 
-This gives the Agent a link to the selected frame, so it knows which area you want to change.
+This copies a link to the selected frame, so the Agent knows exactly which area you want to change.
 
 <img src="assets/copy-selection-link.png" alt="Figma context menu showing Copy/Paste as, then Copy link to selection" width="520">
 
@@ -58,11 +58,19 @@ This gives the Agent a link to the selected frame, so it knows which area you wa
 
 Send the frame link and your request together, for example:
 
-> Frame link: 【paste your Figma selection link】
+> Frame link to edit: 【paste your Figma frame link】
 >
-> Change requested: 【for example, change the sign-up button text to “Register now” and keep everything else unchanged】
+> I want: 【for example, change the sign-up button text to “Register now” and leave everything else as it is】
 
-The Agent will return a screenshot and a summary of changes. Check the result in Figma. If the task added navigation, click through the main path as well.
+When the Agent finishes, it will send you a screenshot and a summary of the changes. Check the result in Figma. If the task added navigation, click the buttons to test it too.
+
+## How the workflow works
+
+The Agent hands the task to the local CLI. The bridge passes it to the Figma plugin, which reads and writes layers through the Figma Plugin API. The Agent then reads back the result and a screenshot, checks them, and delivers the result to you.
+
+![Dark hand-drawn execution path: the Agent uses the local-figma CLI, local bridge, and Figma plugin to edit native layers, then reads back the result](assets/20260928-architecture-flow-dark-en.png)
+
+*The dashed outline encloses the CLI, local bridge, and Figma plugin that are part of the local-figma project.*
 
 ## Introducing five use cases
 
