@@ -50,3 +50,9 @@ change.type 包括 created、deleted、updated、moved。同一个节点可同�
 ## 测试边界
 
 贯通测试执行真实 CLI、回环 HTTP 和生成的插件代码，并检查磁盘任务、结果、diff 与 validate 合同。Figma 文档 API 使用模拟对象。开发期校验器采用 [Ajv 的 draft 2020-12 实现](https://ajv.js.org/json-schema.html)，终端用户安装无需该依赖。
+
+## Workflow request identity and progress
+
+A `/job` submission may include a UUID `requestId`. This becomes the job ID. Repeating it returns the existing job only when its binding, operation, code, target, and risk declaration match; an incomplete journal or changed payload is rejected. This lookup precedes connection and active-job gates so a client can recover a lost submission response without executing the request twice.
+
+Authenticated plugin poll/heartbeat responses may include `X-Figma-Workflow`, a URI-encoded JSON summary read from the current workflow journal. The plugin only renders this summary; it does not write or advance workflow state. See [workflows](20260930-workflows.md) for plan validation, assertion outcomes, human checkpoints, and recovery transitions.

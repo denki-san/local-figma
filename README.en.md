@@ -108,6 +108,7 @@ Send the new selection link to your Agent. It will verify the target and reconne
 
 Current preview release: **[v0.1.0-alpha.2](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2)**. Share this page with your Agent to get started.
 
+- Verified multi-step tasks: [workflow plans, assertions, and recovery](docs/20260930-workflows.md)
 - More ways to phrase a request: [task examples](docs/first-task.md)
 - Installation and workflow instructions for Agents: [Agent guide](docs/agent-quickstart.md)
 - Run the commands yourself: [manual setup guide](docs/quickstart.md)

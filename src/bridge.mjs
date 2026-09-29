@@ -1,3 +1,4 @@
+import { readProgress } from './20260930-workflow.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -65,13 +66,16 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,X-Session-Token');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Expose-Headers', 'X-Figma-Session');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Figma-Session,X-Figma-Workflow');
     res.setHeader('X-Figma-Session', sessionId);
     if (req.method === 'OPTIONS') return reply(204, null);
     try {
       const u = new URL(req.url, 'http://localhost');
       const role = ['/poll', '/heartbeat', '/checkpoint', '/approve', '/complete', '/extensions'].includes(u.pathname) || (u.pathname === '/context' && req.method === 'POST') ? 'plugin' : 'cli';
       if (req.headers['x-session-token'] !== tokens[role]) return reply(403, { error: '认证失败' });
+      if (req.method === 'GET' && ['/poll', '/heartbeat'].includes(u.pathname)) {
+        try { const progress = await readProgress(cwd); if (progress) res.setHeader('X-Figma-Workflow', encodeURIComponent(JSON.stringify(progress))); } catch { /* 日志损坏不阻塞现有任务；面板不显示旧进度。 */ }
+      }
       if (req.method === 'GET' && u.pathname === '/extensions') return reply(200, await listExtensions(cwd));
       if (req.method === 'GET' && u.pathname === '/context') return reply(200, { connected: connection.connected, context, stale: !context || !connection.owns(contextOwner) });
       if (req.method === 'GET' && u.pathname === '/status') return reply(200, { sessionId, connected: connection.connected, connectionState: connection.state, pollAgeMs: connection.ageMs, active, unresolved: [...unresolved], binding, jobs: [...jobs.values()].map(j => ({ id: j.id, state: j.state })) });
@@ -153,6 +157,22 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
         return reply(200, { saved: true, hash: digest });
       }
       if (u.pathname === '/job') {
+        if (data.requestId !== undefined) {
+          if (typeof data.requestId !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(data.requestId)) throw Error('requestId 无效');
+          let prior = jobs.get(data.requestId);
+          if (!prior) {
+            try { prior = await json(path.join(runDir(data.requestId), 'job.json')); }
+            catch (e) {
+              if (e.code !== 'ENOENT') throw e;
+              try { await fs.access(runDir(data.requestId)); throw Error('请求日志写入不完整，保留现场并核验，禁止重投'); }
+              catch (missing) { if (missing.code !== 'ENOENT') throw missing; }
+            }
+          }
+          if (prior) {
+            if (prior.bindingId !== binding.id || prior.operation !== data.operation || prior.code !== (data.code || '') || prior.targetNodeId !== data.targetNodeId || JSON.stringify(prior.risk) !== JSON.stringify(data.risk || { level: 'normal' })) throw Error('相同 requestId 的操作内容不可变');
+            return reply(200, { id: prior.id, state: prior.state, evidence: runDir(prior.id), reused: true });
+          }
+        }
         if (!connection.connected) return reply(409, { error: '正在重连，请稍候；当前请求尚未执行', code: 'RECONNECTING' });
         if (active) return reply(409, { error: '有未完成任务；先读回结果，禁止重放' });
         if (!['inspect', 'preview', 'design-system', 'run'].includes(data.operation)) throw Error('未知操作');
@@ -161,7 +181,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
         if (data.operation === 'run' && (typeof data.code !== 'string' || !data.code.trim())) throw Error('缺少可信脚本');
         const risk = data.risk || { level: 'normal' };
         if (!['normal', 'high'].includes(risk.level) || (risk.level === 'high' && (data.operation !== 'run' || typeof risk.reason !== 'string' || !risk.reason.trim() || risk.reason.length > 1000))) throw Error('风险声明无效；高风险需要不超过 1000 字的说明');
-        const id = crypto.randomUUID();
+        const id = data.requestId || crypto.randomUUID();
         const job = { id, operation: data.operation, code: data.code || '', ...(data.targetNodeId === undefined ? {} : { targetNodeId: data.targetNodeId }), risk: { level: risk.level, ...(risk.level === 'high' ? { reason: risk.reason } : {}) }, state: 'queued', createdAt: new Date().toISOString(), scriptHash: hash(data.code || ''), bindingId: binding.id };
         active = id;
         try {

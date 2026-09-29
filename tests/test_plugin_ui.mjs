@@ -36,7 +36,7 @@ function fixture() {
       calls.push({ url, options });
       const response = await responses.shift();
       if (response instanceof Error) throw response;
-      return { ok: response?.ok ?? true, status: response?.status ?? 200, headers: { get: () => response?.session ?? null }, json: async () => response?.body ?? null };
+      return { ok: response?.ok ?? true, status: response?.status ?? 200, headers: { get: name => name === 'X-Figma-Workflow' ? response?.progress ?? null : response?.session ?? null }, json: async () => response?.body ?? null };
     }
   });
   return { calls, deliveries, contexts, responses, tick: () => tick(), state, element,
@@ -320,4 +320,23 @@ test('宿主超时文案统一中文，同时保留重连状态', async () => {
   assert.equal(f.state.textContent, '正在恢复连接');
   assert.match(f.element('state-detail').textContent, /连接超时/);
   assert.doesNotMatch(f.element('state-detail').textContent, /signal timed out/);
+});
+
+test('任务面板镜像桥接日志进度，不发起独立状态写入', async () => {
+  const f = fixture();
+  f.responses.push({ progress: encodeURIComponent(JSON.stringify({ current: 2, total: 3, target: '更新卡片', state: 'awaiting-review', previous: '创建卡片：已通过', title: '组件整理', mode: 'static' })) });
+  await f.tick();
+  assert.equal(f.element('workflow-progress').hidden, false);
+  assert.equal(f.element('workflow-step').textContent, '2/3 · 更新卡片 · 等待人工验收');
+  assert.match(f.element('workflow-last').textContent, /静态设计.*创建卡片/);
+  assert.equal(f.calls.length, 1);
+  f.responses.push({}); await f.tick();
+  assert.equal(f.element('workflow-progress').hidden, true);
+});
+
+test('失败面板显示具体断言而非仅显示失败状态', async () => {
+  const f = fixture();
+  f.responses.push({ progress: encodeURIComponent(JSON.stringify({ current: 1, total: 2, target: 'Card', state: 'failed', mode: 'static', failure: { property: 'width', expected: '320', actual: '280' } })) });
+  await f.tick();
+  assert.match(f.element('workflow-last').textContent, /width：预期 320，实际 280/);
 });

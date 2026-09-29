@@ -42,3 +42,7 @@ figma-local preview
 先运行 `figma-local result <原任务 ID>`，结合 `figma-local status` 和当前 Figma 画布核对任务是否已经生效。保留已有证据；确认原任务状态后再决定是否继续。`wait` 超时不会取消或重新提交任务。若桥接异常退出，按[手动快速开始](quickstart.md)中的恢复步骤处理。
 
 命令输出、退出码和证据含义见[输出协议](protocol.md)；权限与脚本边界见[安全说明](../SECURITY.md)。本地 `.figma-agent/` 可能包含设计文字、脚本和截图，分享前提醒用户检查。
+
+## Multi-step workflows
+
+For semantic multi-step edits, use the [verified workflow guide](20260930-workflows.md). The Agent prepares a plan with explicit capabilities, bounded targets, machine assertions, and optional human checkpoints. Run `workflow import`, then `workflow run`; inspect the returned state before proceeding. Static plans use `capabilities: []`. Do not record `workflow approve` without the user accepting that checkpoint. Existing single-operation commands remain available.
