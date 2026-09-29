@@ -63,6 +63,7 @@ export function validatePlan(plan) {
       exact(a, ['target', 'property', 'equals', 'tolerance'], '断言'); selector(a.target);
       if (!assertionProperties.includes(a.property) || !['string', 'number', 'boolean'].includes(typeof a.equals) || (typeof a.equals === 'number' && !Number.isFinite(a.equals))) throw Error('断言属性或期望值无效');
       if (a.tolerance !== undefined && (typeof a.tolerance !== 'number' || !Number.isFinite(a.tolerance) || a.tolerance < 0 || typeof a.equals !== 'number')) throw Error('断言误差范围无效');
+      if (a.property === 'exists' && a.equals !== true) throw Error('exists 仅支持 equals:true；目标缺失由寻址阶段报告');
       if (a.property === 'fill' && !/^#[0-9A-F]{6}$/.test(a.equals)) throw Error('填充断言使用大写 #RRGGBB');
     }
   }
@@ -83,8 +84,12 @@ export async function readProgress(cwd) {
     const index = j.steps.findIndex(s => s.state !== 'done');
     const current = j.steps[index < 0 ? j.steps.length - 1 : index];
     const prior = index < 0 ? j.steps.at(-1) : index > 0 ? j.steps[index - 1] : null;
+    const result = current?.attempts?.at(-1)?.result;
+    const failed = j.state === 'failed' ? result?.output?.assertions?.find(a => a.passed === false) : null;
+    const bounded = value => String(typeof value === 'string' ? value : JSON.stringify(value)).slice(0, 80);
+    const failure = failed ? { property: bounded(failed.property), expected: bounded(failed.expected), actual: bounded(failed.actual) } : null;
     return { id: j.plan.id, title: j.plan.title, mode: j.plan.capabilities.length ? 'prototype' : 'static', current: index < 0 ? j.steps.length : index + 1, total: j.steps.length,
-      target: current?.title, state: j.state, previous: prior ? `${prior.title}：已通过` : '', updatedAt: j.updatedAt };
+      target: current?.title, state: j.state, ...(failure ? { failure } : {}), previous: prior ? `${prior.title}：已通过` : '', updatedAt: j.updatedAt };
   } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
 async function lock(cwd) {

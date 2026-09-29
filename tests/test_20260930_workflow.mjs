@@ -278,3 +278,24 @@ test('同时恢复同一过期锁只能有一个执行者', async t => {
   assert.equal(submits, 1); assert.equal(result.filter(r => r.status === 'fulfilled').length, 1);
   assert.equal((await workflowCommand(cwd, ['status', 'sample'])).state, 'done');
 });
+
+test('不存在断言在导入阶段明确拒绝，避免执行后才失败', () => {
+  const p = plan(); p.steps[0].assertions = [{ property: 'exists', equals: false }];
+  assert.throws(() => validatePlan(p), /exists.*true/);
+});
+test('connect 结果完整记录被替换的多 action 点击及保留的其他触发', async () => {
+  const f = figmaFixture(), source = f.make('FRAME', 'Source'), dest = f.make('FRAME', 'Dest');
+  f.rootNode.appendChild(source); f.rootNode.appendChild(dest);
+  const original = [{ trigger: { type: 'ON_CLICK' }, actions: [{ type: 'BACK' }, { type: 'CLOSE' }] }, { trigger: { type: 'ON_HOVER' }, actions: [] }];
+  source.reactions = structuredClone(original);
+  const result = await executeWorkflowStep(f.figma, f.rootNode, { step: { target: { id: source.id }, operation: { kind: 'connect', destination: { id: dest.id } }, assertions: [{ property: 'reactionCount', equals: 2 }] }, capabilities: ['navigation'] });
+  assert.equal(result.verified, true); assert.deepEqual(result.reactionChange.previous, original);
+  assert.equal(result.reactionChange.current.find(r => r.trigger.type === 'ON_CLICK').actions.length, 1);
+  assert.equal(result.reactionChange.previous[0].actions.length, 2);
+});
+test('失败进度携带首个断言的有界摘要', async t => {
+  const cwd = await project(t); await importPlan(cwd, plan());
+  await workflowCommand(cwd, ['run', 'sample'], { submit: async b => ({ id: b.requestId }), wait: async () => ({ waitStatus: 'completed', journalComplete: true, result: { ok: true, output: { verified: false, assertions: [{ property: 'characters', expected: 'a'.repeat(2000), actual: 'b'.repeat(2000), passed: false }] } } }) });
+  const progress = await readProgress(cwd);
+  assert.equal(progress.failure.property, 'characters'); assert.equal(progress.failure.expected.length, 80); assert.equal(progress.failure.actual.length, 80);
+});

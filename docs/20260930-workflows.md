@@ -81,7 +81,7 @@ Capabilities must be explicit. `[]` is static design. Available capabilities are
 
 The workflow validator rejects an interaction operation whose capability is absent. The structured runtime cannot write arbitrary Figma properties or execute plan-provided JavaScript. Existing trusted `run` scripts and standalone commands remain separate operations; workflow capabilities do not sandbox those commands or remove existing interactions from a design.
 
-To upgrade a static design, import a new plan ID with the needed capabilities and use `connect` or `scroll` steps targeting the existing node IDs or exact paths. No screen recreation is necessary. An imported plan is immutable: continue it with `run`, or create a new plan for a revised objective.
+To upgrade a static design, import a new plan ID with the needed capabilities and use `connect` or `scroll` steps targeting the existing node IDs or exact paths. No screen recreation is necessary. **`connect` replaces every existing ON_CLICK reaction on its target with one action, including manually authored multi-action click handlers.** Other triggers are preserved. Inspect existing click handlers before upgrading. Each completed connect result includes `reactionChange.previous` and `reactionChange.current`; the pre-edit snapshot also retains the original reactions if execution fails. An imported plan is immutable: continue it with `run`, or create a new plan for a revised objective.
 
 ## Operations
 
@@ -90,7 +90,7 @@ To upgrade a static design, import a new plan ID with the needed capabilities an
 | `create` | `type`, `properties` | Creates FRAME, RECTANGLE, ELLIPSE, TEXT, or COMPONENT under the target. A retry reuses the step's existing output. |
 | `update` | `properties` | Sets declared properties on the target. |
 | `scroll` | `direction` | Sets NONE, HORIZONTAL, VERTICAL, or HORIZONTAL_AND_VERTICAL; requires `scroll`. |
-| `connect` | `destination`, optional `navigation`, `animate` | Sets one ON_CLICK action; preserves other triggers. NAVIGATE is the default; OVERLAY requires `overlay`. `animate: true` requires `smartAnimate`. |
+| `connect` | `destination`, optional `navigation`, `animate` | Replaces all ON_CLICK reactions with one action; records the previous/current reactions and preserves other triggers. NAVIGATE is the default; OVERLAY requires `overlay`. `animate: true` requires `smartAnimate`. |
 
 Properties: `name`, `x`, `y`, `width`, `height`, `opacity`, `visible`, `cornerRadius`, `characters`, `fontSize`, `fontFamily`, `fontStyle`, and solid `fill` in `#RRGGBB` format. Editing text preserves its existing font unless a font override is supplied. Figma may normalize dimensions or other values; postconditions detect the resulting difference.
 
@@ -102,13 +102,13 @@ A step's optional `scopeNodeId` selects a subtree inside the project binding. It
 
 A selector accepts `id`, `path` (an array of exact child names), and optional expected `name` and `type`. An existing ID takes priority and must pass those checks. If that ID is missing, an explicitly supplied path may resolve the replacement. Missing paths, duplicate names, unexpected types, and out-of-scope IDs stop execution. Renaming nodes requires updating subsequent selectors; paths are a fallback, not a promise that names are unique.
 
-Each step requires assertions. Available properties include `exists`, `name`, `type`, `childCount`, `fill`, dimensions, position, `visible`, `opacity`, `characters`, `fontSize`, `reactionCount`, and `overflowDirection`. Use `equals` and optional numeric `tolerance`; fill assertions use uppercase hex. Declared operation properties also become automatic postconditions, so an `exists` assertion cannot hide a partial property update. Visual and interaction reviews remain separately unverified.
+Each step requires assertions. Available properties include `exists`, `name`, `type`, `childCount`, `fill`, dimensions, position, `visible`, `opacity`, `characters`, `fontSize`, `reactionCount`, and `overflowDirection`. `exists` supports only `equals: true`; missing targets fail during resolution, and `exists: false` is rejected before execution. Use `equals` and optional numeric `tolerance`; fill assertions use uppercase hex. Declared operation properties also become automatic postconditions, so an `exists` assertion cannot hide a partial property update. Visual and interaction reviews remain separately unverified.
 
 Workflow steps retain existing snapshot limits. Use a local `scopeNodeId` for large files; workflows do not bypass the full-snapshot budget or claim to verify an entire large page from a truncated snapshot.
 
 ## Journals, retry, and recovery
 
-The authoritative workflow journal is `.figma-agent/workflows/<id>.json`. It includes the immutable plan, original generated scripts, attempts, request/job IDs, results, and approval notes. Individual job evidence remains in `.figma-agent/runs/<job-id>/`. A current-workflow pointer selects the journal mirrored by the plugin. The plugin does not maintain a second progress state or advance the workflow.
+The authoritative workflow journal is `.figma-agent/workflows/<id>.json`. It includes the immutable plan, original generated scripts, attempts, request/job IDs, results, and approval notes. Individual job evidence remains in `.figma-agent/runs/<job-id>/`. A current-workflow pointer selects the journal mirrored by the plugin. The plugin does not maintain a second progress state or advance the workflow. For failed assertions, the summary includes the first failure’s property, expected value, and actual value, each capped at 80 characters.
 
 - `done`: assertions passed and any requested human checkpoint was accepted. Re-running skips the step.
 - `awaiting-review`: wait for user acceptance, then `approve` and `run`.
@@ -132,4 +132,4 @@ Exit codes: 0 for a completed local command, including import/status/approval; 1
 
 ## Validation performed
 
-Tests cover real CLI → HTTP bridge → plugin-code execution with simulated Figma document objects; request deduplication and bridge restart; interrupted property writes; failed assertions; human checkpoints; unknown outcomes and late results; concurrent stale-lock recovery; and plugin progress rendering. A Figma Desktop smoke test also verified two static steps, the visible completed-progress panel, and re-execution reusing the same node ID. Its temporary test frame was removed after inspection. Navigation/overlay/animation rendering was not part of that desktop smoke test.
+Tests cover real CLI → HTTP bridge → plugin-code execution with simulated Figma document objects; request deduplication and bridge restart; interrupted property writes; failed assertions; human checkpoints; unknown outcomes and late results; concurrent stale-lock recovery; and plugin progress rendering. A Figma Desktop smoke test also verified two static steps, the visible completed-progress panel, and re-execution reusing the same node ID. A follow-up desktop test executed three connect steps and read back native reactions for NAVIGATE, OVERLAY, and SMART_ANIMATE with EASE_IN_AND_OUT and a 0.3-second duration (stored as approximately 0.300000012). Prototype preview clicks verified navigation and Back, a visible Smart Animate transition and its settled destination, and overlay opening and closing. Temporary test frames and the test flow starting point were removed after inspection.

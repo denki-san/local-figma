@@ -333,3 +333,10 @@ test('任务面板镜像桥接日志进度，不发起独立状态写入', async
   f.responses.push({}); await f.tick();
   assert.equal(f.element('workflow-progress').hidden, true);
 });
+
+test('失败面板显示具体断言而非仅显示失败状态', async () => {
+  const f = fixture();
+  f.responses.push({ progress: encodeURIComponent(JSON.stringify({ current: 1, total: 2, target: 'Card', state: 'failed', mode: 'static', failure: { property: 'width', expected: '320', actual: '280' } })) });
+  await f.tick();
+  assert.match(f.element('workflow-last').textContent, /width：预期 320，实际 280/);
+});

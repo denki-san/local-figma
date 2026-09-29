@@ -87,7 +87,7 @@ const request = async (route, options = {}) => {
       const progress = JSON.parse(decodeURIComponent(raw));
       const labels = { ready: '已就绪', running: '执行中', waiting: '等待结果', failed: '检查未通过', 'needs-review': '需要恢复核验', 'awaiting-review': '等待人工验收', done: '已完成' };
       document.getElementById('workflow-step').textContent = `${progress.current}/${progress.total} · ${progress.target} · ${labels[progress.state] || progress.state}`;
-      document.getElementById('workflow-last').textContent = `${progress.mode === 'static' ? '静态设计' : '交互原型'} · ${progress.previous || progress.title}`;
+      document.getElementById('workflow-last').textContent = `${progress.mode === 'static' ? '静态设计' : '交互原型'} · ${progress.failure ? `${progress.failure.property}：预期 ${progress.failure.expected}，实际 ${progress.failure.actual}` : progress.previous || progress.title}`;
       panel.hidden = false;
     } catch { /* 不把损坏或其他版本的进度当作已完成。 */ }
   }

@@ -25,7 +25,7 @@ export async function executeWorkflowStep(figma, root, task) {
   }
   const anchor = await locate(step.target);
   const operation = step.operation;
-  let node = anchor, reused = false;
+  let node = anchor, reused = false, reactionChange;
   if (operation.kind === 'create') {
     if (!anchor.appendChild) throw Error('创建目标不能容纳子节点');
     const registry = JSON.parse(anchor.getSharedPluginData('localFigmaWorkflow', 'localFigmaOutputs') || '{}');
@@ -91,7 +91,9 @@ export async function executeWorkflowStep(figma, root, task) {
     while (b && b.type !== 'PAGE') b = b.parent;
     if (destination.type !== 'FRAME' || a?.id !== b?.id) throw Error('连接目标必须为同页 Frame');
     const action = { type: 'NODE', destinationId: destination.id, navigation: operation.navigation || 'NAVIGATE', transition: operation.animate ? { type: 'SMART_ANIMATE', easing: { type: 'EASE_IN_AND_OUT' }, duration: 0.3 } : null };
-    await node.setReactionsAsync([...(node.reactions || []).filter(r => r.trigger?.type !== 'ON_CLICK'), { trigger: { type: 'ON_CLICK' }, actions: [action] }]);
+    const previous = JSON.parse(JSON.stringify(node.reactions || []));
+    await node.setReactionsAsync([...previous.filter(r => r.trigger?.type !== 'ON_CLICK'), { trigger: { type: 'ON_CLICK' }, actions: [action] }]);
+    reactionChange = { previous, current: JSON.parse(JSON.stringify(node.reactions || [])) };
   }
   const assertions = [];
   // 操作声明自动成为验收条件，防止只有 exists 断言时误认部分写入成功。
@@ -124,5 +126,5 @@ export async function executeWorkflowStep(figma, root, task) {
       : actual === assertion.equals;
     assertions.push({ property: assertion.property, expected: assertion.equals, actual: actual ?? null, passed });
   }
-  return { nodeId: node.id, name: node.name, reused, verified: assertions.every(a => a.passed), assertions, visualReview: 'not-run' };
+  return { nodeId: node.id, name: node.name, reused, verified: assertions.every(a => a.passed), assertions, ...(reactionChange ? { reactionChange } : {}), visualReview: 'not-run' };
 }
