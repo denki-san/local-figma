@@ -8,6 +8,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 <header><h1>local-figma</h1><div><button id="settings-open">设置</button> <button id="hide-panel">隐藏</button></div></header>
 <section class="target" aria-label="当前目标"><div class="label">当前目标</div><div id="target-name" class="name">正在确认…</div><div id="selection-name" class="selection" hidden></div></section>
 <p id="state" role="status" aria-live="polite">正在处理</p><p id="state-detail">正在连接本机服务。</p>
+<section id="workflow-progress" hidden style="margin-top:12px;border-top:1px solid var(--figma-color-border,#ddd);padding-top:8px"><div id="workflow-step" class="name"></div><div id="workflow-last" class="label"></div></section>
 <section id="approval" hidden><p id="approval-reason"></p><details><summary>查看影响范围与脚本</summary><pre id="approval-details"></pre></details><button id="approve">允许本次修改</button> <button id="reject">取消本次修改</button></section>
 <section id="settings" hidden aria-label="可选扩展设置">
   <header><h1>可选扩展</h1><button id="settings-close">返回</button></header>
@@ -78,6 +79,18 @@ let review = null, deciding = false;
 const randomNonce = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
 const request = async (route, options = {}) => {
   const response = await fetch('http://localhost:' + config.port + route, { ...options, headers, signal: AbortSignal.timeout(3000) });
+  if (response.ok && /^\/(poll|heartbeat)/.test(route)) {
+    const raw = response.headers?.get?.('X-Figma-Workflow');
+    const panel = document.getElementById('workflow-progress');
+    panel.hidden = true;
+    if (raw) try {
+      const progress = JSON.parse(decodeURIComponent(raw));
+      const labels = { ready: '已就绪', running: '执行中', waiting: '等待结果', failed: '检查未通过', 'needs-review': '需要恢复核验', 'awaiting-review': '等待人工验收', done: '已完成' };
+      document.getElementById('workflow-step').textContent = `${progress.current}/${progress.total} · ${progress.target} · ${labels[progress.state] || progress.state}`;
+      document.getElementById('workflow-last').textContent = `${progress.mode === 'static' ? '静态设计' : '交互原型'} · ${progress.previous || progress.title}`;
+      panel.hidden = false;
+    } catch { /* 不把损坏或其他版本的进度当作已完成。 */ }
+  }
   const session = response.ok && response.headers?.get?.('X-Figma-Session');
   if (session && session !== serverSessionId) {
     serverSessionId = session;
