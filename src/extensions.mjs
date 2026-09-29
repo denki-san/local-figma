@@ -5,7 +5,7 @@ import { json, root, save } from './project.mjs';
 import { waitForResult } from './wait.mjs';
 import { textOperation, fillOperation } from './edit-operations.mjs';
 
-export const builtinCommands = new Set(['help', 'init', 'setup', 'serve', 'connect', 'doctor', 'recover', 'resolve',
+export const builtinCommands = new Set(['workflow', 'help', 'init', 'setup', 'serve', 'connect', 'doctor', 'recover', 'resolve',
   'status', 'context', 'text', 'fill', 'font', 'layout', 'align', 'distribute', 'prototype', 'instance', 'props',
   'bind-fill', 'inspect', 'preview', 'design-system', 'run', 'result', 'wait', 'history', 'diff', 'validate', 'guide', 'guide-check', 'extension']);
 const validId = id => typeof id === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(id) && !builtinCommands.has(id);
