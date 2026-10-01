@@ -14,15 +14,15 @@ Runs locally · Works with your Agent · Free and open source
 
 ## Why local-figma?
 
-**AI can already write code. Why bother with design files?**
+**1️⃣ AI can already write code. Why bother with design files?**
 
 Vibe coding feels great when you get the first result. But without a design file, keeping layouts, styles, and page relationships consistent through repeated changes becomes harder. local-figma lets your Agent edit a design you can keep refining, compare alternatives, and confirm the result before you update the code. Future iterations have a clear reference.
 
-**Figma already has AI features and MCP. Why a local tool?**
+**2️⃣ Figma already has AI features and MCP. Why a local tool?**
 
 local-figma connects the Agent you already use to native Figma layers through a CLI and plugin running on your computer. Progress is visible in the plugin, and task records are stored locally so you can inspect results and recover interrupted work. The code is open source, so you can adapt it to your own workflow.
 
-**Does it cost anything?**
+**3️⃣ Does it cost anything?**
 
 local-figma is free under the Apache-2.0 license for personal and commercial use. Your AI assistant and Figma services follow their own pricing.
 
