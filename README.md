@@ -17,6 +17,25 @@
 - **Figma 桌面应用**：打开你有编辑权限的设计文件。
 - **能操作本机的 AI 助手（Agent）**：它需要能安装工具、执行命令、查看图片。下文统一称为 Agent。
 
+## 直接下载安装
+
+需要 **macOS、Node.js 22+（含 npm）和 Figma Desktop**。下载 [figma-local-runtime-0.1.0-alpha.3.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.3/figma-local-runtime-0.1.0-alpha.3.tgz) 即可安装，无需克隆仓库或编译。选择这个 `.tgz` 附件；GitHub 的 “Source code” 压缩包是源码。
+
+在下载目录打开终端，执行：
+
+```sh
+npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
+figma-local help
+mkdir -p ~/figma-local-project
+cd ~/figma-local-project
+figma-local init '<替换为含 node-id 的 Figma 画板链接>'
+figma-local connect
+```
+
+最后一条命令会持续运行并输出 `manifest.json` 路径。在 Figma Desktop 中选择 **Plugins → Development → Import plugin from manifest**，导入该文件，再运行 **Figma Local Runtime**。显示“已连接”后即可让 Agent 开始工作。使用期间保持终端连接和插件运行；后续命令在同一项目目录的另一终端执行。
+
+升级时先检查正在执行的任务，停止旧插件与连接，再安装新包、重新运行 `figma-local connect` 并打开插件；保留项目中的 `.figma-agent/` 绑定和记录。
+
 ## 怎么用？
 
 你负责选画板、说需求、看效果；Agent 通过 local-figma 读取、修改和预览设计。
@@ -106,13 +125,13 @@ local-figma 负责连接和操作 Figma；理解你的需求、提出设计方�
 
 ## 下载和更多帮助
 
-当前试用版本：**[v0.1.0-alpha.2](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2)**。把本页发给 Agent，让它按上面的流程帮你开始。
+当前试用版本：**[v0.1.0-alpha.3](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.3)**。把本页发给 Agent，让它按上面的流程帮你开始。
 
 - 参考更多需求说法：[任务示例](docs/first-task.md)
 - 给 Agent 看的安装和操作步骤：[Agent 操作指南](docs/agent-quickstart.md)
 - 自己运行命令：[手动安装指南](docs/quickstart.md)
 - 开发扩展：[扩展接口](docs/extensions.md)
-- 了解版本变化与数据处理：[版本说明](docs/releases/v0.1.0-alpha.2.md) · [安全说明](SECURITY.md)
+- 了解版本变化与数据处理：[版本说明](docs/releases/20261001-alpha-3.md) · [安全说明](SECURITY.md)
 
 - Verified multi-step tasks: [workflow plans, assertions, and recovery](docs/20260930-workflows.md)
 

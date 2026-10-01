@@ -17,6 +17,25 @@ Share a frame link and your request with an Agent, then review the result as nat
 - **Figma Desktop**: Open a design file you can edit.
 - **An AI assistant that can work on your computer (Agent)**: It needs to install tools, run commands, and inspect images. This guide calls it an Agent.
 
+## Download and install directly
+
+Requires **macOS, Node.js 22+ (including npm), and Figma Desktop**. Download [figma-local-runtime-0.1.0-alpha.3.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.3/figma-local-runtime-0.1.0-alpha.3.tgz); no repository clone or build is needed. Choose the `.tgz` release asset, not GitHub's “Source code” archives.
+
+Open a terminal in the download directory and run:
+
+```sh
+npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
+figma-local help
+mkdir -p ~/figma-local-project
+cd ~/figma-local-project
+figma-local init '<replace with a Figma frame link containing node-id>'
+figma-local connect
+```
+
+The last command stays running and prints a `manifest.json` path. In Figma Desktop, choose **Plugins → Development → Import plugin from manifest**, import that file, and run **Figma Local Runtime**. Once it shows “已连接” (Connected), your Agent can start working. Keep the connection terminal and plugin running; use another terminal in the same project directory for subsequent commands.
+
+To upgrade, inspect any running task, stop the old plugin and connection, install the new package, then run `figma-local connect` and open the plugin again. Preserve the project's `.figma-agent/` bindings and evidence.
+
 ## How does it work?
 
 You select a frame, describe the change, and review the result. The Agent uses local-figma to read, edit, and preview the design.
@@ -106,13 +125,13 @@ Send the new selection link to your Agent. It will verify the target and reconne
 
 ## Download and further help
 
-Current preview release: **[v0.1.0-alpha.2](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.2)**. Share this page with your Agent to get started.
+Current preview release: **[v0.1.0-alpha.3](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.3)**. Share this page with your Agent to get started.
 
 - Verified multi-step tasks: [workflow plans, assertions, and recovery](docs/20260930-workflows.md)
 - More ways to phrase a request: [task examples](docs/first-task.md)
 - Installation and workflow instructions for Agents: [Agent guide](docs/agent-quickstart.md)
 - Run the commands yourself: [manual setup guide](docs/quickstart.md)
 - Build an extension: [extension interfaces](docs/extensions.md)
-- Version changes and data handling: [release notes](docs/releases/v0.1.0-alpha.2.md) · [security](SECURITY.md)
+- Version changes and data handling: [release notes](docs/releases/20261001-alpha-3.md) · [security](SECURITY.md)
 
 Licensed under [Apache-2.0](LICENSE).

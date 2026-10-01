@@ -1,6 +1,6 @@
 {
   "name": "figma-local-runtime",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "面向 Agent 的本地 Figma 编辑运行时",
   "license": "Apache-2.0",
   "repository": { "type": "git", "url": "git+https://github.com/denki-san/local-figma.git" },
