@@ -1,48 +1,105 @@
-# Agent 操作指南
+# Agent quick start
 
-本指南面向能执行用户本机命令、读取图片的 Agent，适用于 local-figma v0.1.0-alpha.3。用户提供 Figma 选区链接、需求和目标文件的编辑权限；Agent 负责安装、连接、局部执行与结果核验。用户在首次连接时运行开发插件，并确认设计效果。
+For an Agent that can execute local commands and inspect images. This guide covers local-figma v0.1.0-alpha.3. The user supplies a Figma frame link, an editing request, and access to the design file; the Agent handles installation, scoped edits, and verification.
 
-## 1. 准备目标与连接
+## 1. Install and connect
 
-确认运行环境为 macOS、Node.js 22+ 和 Figma Desktop。要求用户提供包含 `node-id` 的目标 Frame 链接；只用该链接建立写入目标。先确定保存本地证据的项目目录，后续命令都在同一目录执行。
+Requires macOS, Node.js 22+ with npm, and Figma Desktop. Figma's free Starter plan supports this workflow; AI assistant costs depend on the service used. The standard runtime requires no separate model API key.
 
-从 [v0.1.0-alpha.3 Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.3) 下载 `figma-local-runtime-0.1.0-alpha.3.tgz` 后安装：
+Download [figma-local-runtime-0.1.0-alpha.3.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.3/figma-local-runtime-0.1.0-alpha.3.tgz). Install the release asset, not GitHub's Source code archives. No build is required.
 
 ```sh
 npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
 figma-local help
-figma-local init '<用户提供的含 node-id 的 Figma 链接>'
+mkdir -p ~/figma-local-project
+cd ~/figma-local-project
+figma-local init '<user-provided Figma frame link containing node-id>'
 figma-local connect
 ```
 
-`connect` 会持续运行并输出插件 `manifest` 路径。把路径和步骤告诉用户：在目标文件的 Figma Desktop 中打开 Plugins → Development → Import plugin from manifest，导入并运行插件。保持桥接终端和插件运行；在同一目录另开终端执行后续命令。若目录已有绑定，先运行 `figma-local doctor` 查看现状；处理其他文件时使用新的项目目录。
+Use one project directory for the binding and task evidence. In an existing project, run `figma-local doctor` before initializing or restarting anything. Use a separate project directory for a different design file.
 
-## 2. 读取目标，确认方案
+`connect` stays running and prints a plugin manifest path. Give the user that exact path and these steps:
+
+1. Open the target file in Figma Desktop.
+2. Choose **Plugins → Development → Import plugin from manifest** and select the printed `manifest.json`.
+3. Run **Figma Local Runtime** from the Development plugins menu.
+4. Keep the plugin and connection terminal running. Run subsequent commands in another terminal in the same project directory.
+
+When upgrading, inspect any active task first, stop the old plugin and bridge, install the new package, and restart both. Preserve `.figma-agent/` bindings and evidence.
+
+## 2. Inspect the target and choose the design mode
 
 ```sh
 figma-local doctor
 figma-local inspect
-figma-local wait TASK_ID
-figma-local result TASK_ID
+figma-local wait <inspect-job-id>
+figma-local result <inspect-job-id>
 figma-local preview
+figma-local wait <preview-job-id>
+figma-local result <preview-job-id>
 ```
 
-先把 `TASK_ID` 替换成 `inspect` 输出的 `id`。`doctor` 的 `ready` 只表明本机连接可用；还需检查 `inspect` 返回的文件与目标节点，并对 `preview` 返回的任务 ID 分别执行 `wait`、`result`，打开 PNG 查看画板。提交命令返回 `queued` 只表示任务已入队，实际结果以对应的 `result` 为准。
+Replace each job ID with the `id` returned by its submission. Check the actual file and target node in the inspect result, then open the exported preview PNG. `doctor` readiness confirms the local connection, not the design target or visual quality. A `queued` response confirms submission only.
 
-向用户给出简短修改方案与范围，确认需要保留的文字、组件或风格。已有稿优先局部修改；从零设计先确认页面目标、真实内容、尺寸和设计方向。只在用户提供的绑定范围内操作；涉及共享组件、全局变量或大范围改动时，先说明范围并取得确认。
+Before editing, establish the requested mode: **static design** or **interactive prototype**. For static work, create and refine screens without adding reactions or animation. Existing interactions remain unless their removal is requested. For prototypes, identify the required navigation, scrolling, overlays, and animation.
 
-## 3. 修改与交付
+Explain the intended scope briefly. Preserve the existing content and style where requested; for new designs, establish page purpose, content, dimensions, and visual direction. Proceed within the user's authorized scope. Resolve missing product decisions before dependent work, and obtain authorization when expanding into shared components, global variables, or other areas outside that scope.
 
-根据任务选择 `figma-local help` 中的高层命令，或执行已经审阅的本地 JavaScript 脚本。每个写入任务都保存其任务 ID，随后对同一 ID 执行 `wait`、`result`；需要核对变化时执行 `diff` 和 `validate`，再运行 `preview` 并检查新截图。脚本可访问 Figma Plugin API，执行前要审阅其作用范围。声明高风险的 `run` 任务由用户在插件中确认。
+## 3. Execute semantic steps and verify results
 
-交付时给用户：修改摘要、结果截图、Figma 中需要人工检查的地方。涉及交互原型时，还需在 Figma 中实际点击主要路径。设计质量与最终效果由用户确认。
+For multi-step tasks, use the [verified workflow guide](20260930-workflows.md). Build the plan around meaningful units such as a component, a screen, or a refinement, with descriptive names and machine-checkable assertions. Users do not need to write the plan JSON.
 
-## 连接中断或任务超时
+```sh
+figma-local workflow import ./plan.json
+figma-local workflow run <plan-id>
+figma-local workflow status <plan-id>
+```
 
-先运行 `figma-local result <原任务 ID>`，结合 `figma-local status` 和当前 Figma 画布核对任务是否已经生效。保留已有证据；确认原任务状态后再决定是否继续。`wait` 超时不会取消或重新提交任务。若桥接异常退出，按[手动快速开始](quickstart.md)中的恢复步骤处理。
+Static plans use `capabilities: []`. Prototype plans declare only the capabilities needed: `navigation`, `scroll`, `overlay`, and `smartAnimate`. The plugin mirrors the journal's current step and result. `workflow run` proceeds sequentially until completion, failure, a pending result, or a review checkpoint; read its returned state before deciding the next action.
 
-命令输出、退出码和证据含义见[输出协议](protocol.md)；权限与脚本边界见[安全说明](../SECURITY.md)。本地 `.figma-agent/` 可能包含设计文字、脚本和截图，分享前提醒用户检查。
+Use optional human checkpoints for decisions that need user judgment. At `awaiting-review`, inspect the result and wait for the user's acceptance before recording it:
 
-## Multi-step workflows
+```sh
+figma-local workflow approve <plan-id> <step-id> 'User accepted the appearance and layout'
+figma-local workflow run <plan-id>
+```
 
-For semantic multi-step edits, use the [verified workflow guide](20260930-workflows.md). The Agent prepares a plan with explicit capabilities, bounded targets, machine assertions, and optional human checkpoints. Run `workflow import`, then `workflow run`; inspect the returned state before proceeding. Static plans use `capabilities: []`. Do not record `workflow approve` without the user accepting that checkpoint. Existing single-operation commands remain available.
+Do not invent approval. Machine assertions establish declared properties, not visual acceptance. To add interactions later, create a new plan targeting the existing screens. **A connect step replaces all existing ON_CLICK reactions on its target with one action.** Inspect manual click handlers first; previous/current reactions are retained in the step result.
+
+For a small edit or an operation outside the workflow schema, use the high-level commands listed by `figma-local help`, or a reviewed local JavaScript script. Scripts have access to the Figma Plugin API; inspect their target scope before execution. A `run` declared with `--high-risk` requires confirmation in the plugin.
+
+For every submitted write, retain its job ID and read `wait` and `result` for that same ID. Check the result wrapper's `journalComplete` and nested `result.ok`; inspect `diff` and `validate` where applicable. Use `--node` or a workflow's `scopeNodeId` to keep large-file operations within a small verified subtree of the binding.
+
+## 4. Review and deliver
+
+Export and open a fresh preview after edits. Check layout, typography, content, and component consistency. For prototypes, click the main paths in Figma and verify navigation and overlays separately from machine assertions. Revisit earlier screens when later design decisions require consistent changes.
+
+Give the user a concise change summary, a result preview, and any remaining visual or interaction checks. Report separately what was submitted, executed, machine-verified, visually inspected, and accepted by the user.
+
+## Interrupted connections and uncertain results
+
+Read `figma-local result <original-job-id>` and `figma-local status` before resubmitting anything. A timeout does not cancel the original job or prove that its edits failed. Retain its evidence and compare the current target with the recorded result.
+
+For workflows:
+
+- `done`: completed steps are skipped on subsequent runs.
+- `waiting`: run again to read or claim the same request, without creating another attempt.
+- `failed`: inspect the definite failure, address its cause, then explicitly use `workflow retry <plan-id>`.
+- `needs-review`: run can consume a late complete result. Otherwise stop the previous plugin, obtain a fresh independent inspect of the exact original target, and resolve the original job before reconciliation.
+
+```sh
+figma-local inspect --node <original-target-id>
+figma-local wait <inspection-job-id>
+figma-local result <inspection-job-id>
+figma-local resolve <original-job-id> --inspect <inspection-job-id> --previous-plugin-stopped
+figma-local workflow reconcile <plan-id>
+```
+
+Only declare `--previous-plugin-stopped` after actually stopping the previous plugin. Restart the bridge and plugin as needed to perform the independent inspection. `resolve` records recovery evidence without turning an unknown original result into success. `reconcile` verifies the existing state without replaying the design operation. Recovery is bounded, not transactional rollback.
+
+If the bridge exited unexpectedly, follow the recovery procedure in [manual quick start](quickstart.md). Workflow exit code 2 means waiting or review is required; inspect the JSON state as well as the exit code. The [output protocol](protocol.md) describes job evidence and other command exit codes.
+
+## Local execution and data
+
+The bridge runs on loopback, and `.figma-agent/` stores local scripts, results, design text, and previews. Review those files before sharing them. Figma account and file permissions still apply; the runtime does not grant additional access. An Agent or optional extension may send content to its configured remote services, so local execution does not imply that the entire workflow is offline. See [security](../SECURITY.md) for details.
