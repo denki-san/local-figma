@@ -1,7 +1,7 @@
 # local-figma
 
-**用自然语言快速批量修改 Figma 设计稿，并保持原有样式一致。**<br>
-把画板链接和需求交给 Agent，完成后查看原生可编辑的结果。
+**用自然语言批量修改 Figma 设计稿**<br>
+本地运行 · 对接你的 Agent · 开源免费
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -10,7 +10,21 @@
 ![首版范围：macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 [![许可证：Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-![local-figma：说出需求，改好设计](assets/product-hero.png)
+![用自然语言批量修改 Figma 设计稿：本地运行、对接你的 Agent、开源免费](assets/20261001-product-hero-zh.png)
+
+## 为什么需要 local-figma？
+
+**AI 都能直接写代码了，还要设计稿干什么？**
+
+Vibe coding 出结果很爽，但持续修改时，缺少设计稿会让布局、样式和页面关系难以统一调整。local-figma 让 Agent 直接修改可编辑的设计稿，帮助你比较方案、确认效果，再据此更新代码，让后续迭代有明确依据。
+
+**Figma 官方已经有 AI 和 MCP 了，为什么还要一个本地工具？**
+
+local-figma 让你熟悉的 Agent 通过本机运行的 CLI 和插件修改 Figma 原生图层，接入已有工作流。执行进度在插件里可见，任务记录保存在本地，方便核对结果和恢复中断；工具开源，也可以按自己的需要调整。
+
+**收费吗？**
+
+local-figma 不收费，采用 Apache-2.0 开源协议，个人和商用都免费。AI 助手和 Figma 服务按各自规则收费。
 
 ## 开始前，需要准备什么？
 

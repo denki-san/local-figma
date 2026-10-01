@@ -9,7 +9,7 @@
   "type": "module",
   "bin": { "figma-local": "bin/figma-local.mjs" },
   "engines": { "node": ">=22" },
-  "files": ["bin/", "src/", "!src/jev*.mjs", "plugin/", "schemas/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "assets/preview.png", "assets/product-hero.png", "assets/20260928-product-hero-en.png", "assets/copy-selection-link.png", "assets/plugin-connected.png", "assets/20260928-plugin-connected-en.png", "assets/usage-flow.png", "assets/usage-flow-dark.png", "assets/20260928-usage-flow-dark-en.png", "assets/architecture-flow-dark.png", "assets/20260928-architecture-flow-dark-en.png", "README.md", "README.en.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
+  "files": ["bin/", "src/", "!src/jev*.mjs", "plugin/", "schemas/", "docs/", "!docs/test-*.md", "!docs/test_*.md", "assets/preview.png", "assets/product-hero.png", "assets/20261001-product-hero-zh.png", "assets/20261001-product-hero-en.png", "assets/20260928-product-hero-en.png", "assets/copy-selection-link.png", "assets/plugin-connected.png", "assets/20260928-plugin-connected-en.png", "assets/usage-flow.png", "assets/usage-flow-dark.png", "assets/20260928-usage-flow-dark-en.png", "assets/architecture-flow-dark.png", "assets/20260928-architecture-flow-dark-en.png", "README.md", "README.en.md", "LICENSE", "SECURITY.md", "CONTRIBUTING.md"],
   "scripts": { "test": "node --test tests/test_*.mjs", "check": "node --check bin/figma-local.mjs && node --check plugin/main.js" },
   "devDependencies": { "ajv": "8.20.0" }
 }

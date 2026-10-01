@@ -1,7 +1,7 @@
 # local-figma
 
-**Use natural language to make fast, batch edits to Figma designs while keeping existing styles consistent.**<br>
-Share a frame link and your request with an Agent, then review the result as native, editable Figma layers.
+**Batch-edit Figma designs with natural language**<br>
+Runs locally · Works with your Agent · Free and open source
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -10,7 +10,21 @@ Share a frame link and your request with an Agent, then review the result as nat
 ![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
-![local-figma: Describe what you need, then refine the design](assets/20260928-product-hero-en.png)
+![Batch-edit Figma designs with natural language: runs locally, works with your Agent, free and open source](assets/20261001-product-hero-en.png)
+
+## Why local-figma?
+
+**AI can already write code. Why bother with design files?**
+
+Vibe coding feels great when you get the first result. But without a design file, keeping layouts, styles, and page relationships consistent through repeated changes becomes harder. local-figma lets your Agent edit a design you can keep refining, compare alternatives, and confirm the result before you update the code. Future iterations have a clear reference.
+
+**Figma already has AI features and MCP. Why a local tool?**
+
+local-figma connects the Agent you already use to native Figma layers through a CLI and plugin running on your computer. Progress is visible in the plugin, and task records are stored locally so you can inspect results and recover interrupted work. The code is open source, so you can adapt it to your own workflow.
+
+**Does it cost anything?**
+
+local-figma is free under the Apache-2.0 license for personal and commercial use. Your AI assistant and Figma services follow their own pricing.
 
 ## What do you need before you start?
 
