@@ -24,7 +24,7 @@ local-figma connects the Agent you already use to native Figma layers through a 
 
 **3️⃣ Does it cost anything?**
 
-local-figma is free under the Apache-2.0 license for personal and commercial use. Your AI assistant and Figma services follow their own pricing.
+local-figma is free under the Apache-2.0 license for personal and commercial use. **This workflow works with Figma’s free plan; no paid Figma subscription is required.** AI assistant costs depend on the service you choose.
 
 ## What do you need before you start?
 

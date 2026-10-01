@@ -24,7 +24,7 @@ local-figma 让你熟悉的 Agent 通过本机运行的 CLI 和插件修改 Figm
 
 **3️⃣ 收费吗？**
 
-local-figma 不收费，采用 Apache-2.0 开源协议，个人和商用都免费。AI 助手和 Figma 服务按各自规则收费。
+local-figma 不收费，采用 Apache-2.0 开源协议，个人和商用都免费。**使用这套流程，Figma 免费版即可，无需购买 Figma 付费订阅。** AI 助手的费用按你选择的服务计算。
 
 ## 开始前，需要准备什么？
 
