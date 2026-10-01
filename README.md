@@ -147,6 +147,6 @@ local-figma 负责连接和操作 Figma；理解你的需求、提出设计方�
 - 开发扩展：[扩展接口](docs/extensions.md)
 - 了解版本变化与数据处理：[版本说明](docs/releases/20261001-alpha-3.md) · [安全说明](SECURITY.md)
 
-- Verified multi-step tasks: [workflow plans, assertions, and recovery](docs/20260930-workflows.md)
+- 多步骤校验任务：[工作流计划、断言与恢复](docs/20260930-workflows.md)
 
 本项目采用 [Apache-2.0](LICENSE) 许可证。
