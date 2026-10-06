@@ -1,3 +1,4 @@
+import { createPluginI18n } from './20261006-plugin-i18n.mjs';
 import { readProgress } from './20260930-workflow.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -11,11 +12,14 @@ import { isNodeId } from './node-id.mjs';
 import { listExtensions, configureExtension } from './extensions.mjs';
 
 const assets = fileURLToPath(new URL('../plugin/', import.meta.url));
-function inactiveUi(title, detail) {
+export function inactiveUi(state) {
+  const titleKey = state === 'notStarted' ? 'notStarted' : 'disconnected';
+  const detailKey = state === 'notStarted' ? 'startDetail' : 'restartDetail';
+  const {t} = createPluginI18n('zh-CN');
   return `<!doctype html><html lang="zh-CN" data-runtime-inactive><meta charset="utf-8"><style>
 :root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:16px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
 h1{font-size:14px;font-weight:650;margin:0 0 28px}p{margin:0}p[role="status"]{font-size:14px;font-weight:600;margin-bottom:4px}
-</style><h1>local-figma</h1><p role="status">${title}</p><p>${detail}</p></html>`;
+</style><h1>local-figma</h1><p role="status">${t(titleKey)}</p><p>${t(detailKey)}</p><script>const i18n = (${createPluginI18n.toString()})(navigator.language);document.documentElement.lang=i18n.locale;document.querySelector('[role="status"]').textContent=i18n.t(${JSON.stringify(titleKey)});document.querySelector('p:not([role])').textContent=i18n.t(${JSON.stringify(detailKey)});</script></html>`;
 }
 export async function start(cwd, port = 43187, connectionOptions = {}) {
   const dir = root(cwd), binding = await json(path.join(dir, 'binding.json'));
@@ -240,7 +244,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     const pluginDir = path.join(dir, 'plugin');
     await fs.mkdir(pluginDir, { recursive: true, mode: 0o700 });
     await fs.copyFile(path.join(assets, 'main.js'), path.join(pluginDir, 'main.js'));
-    const ui = (await fs.readFile(path.join(assets, 'ui.html'), 'utf8')).replace('SESSION_CONFIG', JSON.stringify({ port, token: tokens.plugin, binding: { fileKey: binding.fileKey, nodeId: binding.nodeId } }).replace(/</g, '\\u003c'));
+    const ui = (await fs.readFile(path.join(assets, 'ui.html'), 'utf8')).replace('SESSION_I18N', createPluginI18n.toString()).replace('SESSION_CONFIG', JSON.stringify({ port, token: tokens.plugin, binding: { fileKey: binding.fileKey, nodeId: binding.nodeId } }).replace(/</g, '\\u003c'));
     uiTouched = true;
     await fs.writeFile(path.join(pluginDir, 'ui.html'), ui, { mode: 0o600 });
     await save(path.join(pluginDir, 'manifest.json'), { name: 'Figma Local Runtime', api: '1.0.0', main: 'main.js', ui: 'ui.html', editorType: ['figma'], documentAccess: 'dynamic-page', enablePrivatePluginApi: true, networkAccess: { allowedDomains: ['none'], devAllowedDomains: [`http://localhost:${port}`] } });
@@ -256,7 +260,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
       catch (cleanupError) { failures.push(cleanupError); }
     }
     if (uiTouched && !connectionOptions.persistentPlugin) {
-      try { await fs.writeFile(path.join(dir, 'plugin/ui.html'), inactiveUi('连接未启动', '回到 Agent 对话排查，修复后重新运行插件。'), { mode: 0o600 }); }
+      try { await fs.writeFile(path.join(dir, 'plugin/ui.html'), inactiveUi('notStarted'), { mode: 0o600 }); }
       catch (cleanupError) { failures.push(cleanupError); }
     }
     await lock.close();
@@ -273,7 +277,7 @@ export async function start(cwd, port = 43187, connectionOptions = {}) {
     await Promise.allSettled([...approvals.values()].map(entry => entry.promise));
     if (active) await save(path.join(runDir(active), 'recovery.json'), { status: 'unknown-after-disconnect', instruction: '重新连接后先 inspect，禁止重放脚本' });
     await fs.rm(path.join(dir, 'session.json'), { force: true });
-    if (!connectionOptions.persistentPlugin) await fs.writeFile(path.join(dir, 'plugin', 'ui.html'), inactiveUi('连接已断开', '回到 Agent 对话让它重连，再在 Figma 运行插件。'));
+    if (!connectionOptions.persistentPlugin) await fs.writeFile(path.join(dir, 'plugin', 'ui.html'), inactiveUi('disconnected'));
     await lock.close(); await fs.unlink(path.join(dir, 'bridge.lock'));
   })();
   return { port, close, manifest: path.join(dir, 'plugin', 'manifest.json') };

@@ -1,28 +1,35 @@
-<!doctype html><html lang="zh-CN"><meta charset="utf-8"><style>
+<!doctype html><html lang="en"><meta charset="utf-8"><style>
 :root{color-scheme:light dark}*{box-sizing:border-box}body{margin:0;padding:16px;font:12px/1.6 system-ui;color:var(--figma-color-text,#242424);background:var(--figma-color-bg,#fff)}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}h1{font-size:14px;margin:0;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;padding:6px 10px}button:active{transform:scale(.97)}button:focus-visible,summary:focus-visible{outline:2px solid #3478f6;outline-offset:3px}
+header{gap:8px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}h1{font-size:14px;margin:0;font-weight:650}button{font:inherit;cursor:pointer;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;padding:6px 10px}button:active{transform:scale(.97)}button:focus-visible,summary:focus-visible{outline:2px solid #3478f6;outline-offset:3px}
 .target{margin-bottom:20px}.label,.selection{color:var(--figma-color-text-secondary,#737373)}.label{font-size:11px}.name{font-weight:600;margin:2px 0;overflow-wrap:anywhere}.selection{overflow-wrap:anywhere}
 #state{font-size:14px;font-weight:600;margin:0}#state-detail{margin:4px 0 0;overflow-wrap:anywhere}#approval{border-top:1px solid var(--figma-color-border,#ddd);margin-top:20px;padding-top:12px}#approval-reason{margin:0 0 12px;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:160px;overflow:auto;font:11px/1.5 ui-monospace,monospace}summary{cursor:pointer;margin-bottom:8px}#approve{background:#1769e0;color:#fff;border-color:#1769e0}
-#settings{position:absolute;inset:0;padding:16px;overflow:auto;background:var(--figma-color-bg,#fff);z-index:2}#settings header{margin-bottom:12px}#settings label{display:block;margin:12px 0 4px}#settings select,#extension-key{box-sizing:border-box;width:100%;padding:7px;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;font:inherit}#extension-disclosure,#settings-note{color:var(--figma-color-text-secondary,#737373)}#settings-actions{display:flex;gap:8px;margin-top:12px}#settings-message{margin-top:10px}#settings button:disabled{opacity:.5;cursor:default}
+#settings{position:absolute;inset:0;padding:16px;overflow:auto;background:var(--figma-color-bg,#fff);z-index:2}#settings header{margin-bottom:12px}#settings label{display:block;margin:12px 0 4px}#settings select,#extension-key{box-sizing:border-box;width:100%;padding:7px;border:1px solid var(--figma-color-border,#ddd);border-radius:6px;background:var(--figma-color-bg,#fff);color:inherit;font:inherit}#extension-disclosure,#settings-note{color:var(--figma-color-text-secondary,#737373)}#settings-actions{flex-wrap:wrap;display:flex;gap:8px;margin-top:12px}#settings-message{margin-top:10px}#settings button:disabled{opacity:.5;cursor:default}
 </style>
-<header><h1>local-figma</h1><div><button id="settings-open">设置</button> <button id="hide-panel">隐藏</button></div></header>
-<section class="target" aria-label="当前目标"><div class="label">当前目标</div><div id="target-name" class="name">正在确认…</div><div id="selection-name" class="selection" hidden></div></section>
-<p id="state" role="status" aria-live="polite">正在处理</p><p id="state-detail">正在连接本机服务。</p>
+<header><h1>local-figma</h1><div><button id="settings-open" data-i18n="settings"></button> <button id="hide-panel" data-i18n="hide"></button></div></header>
+<section class="target" data-i18n-aria="target" aria-label=""><div class="label" data-i18n="target"></div><div id="target-name" class="name" data-i18n="checking"></div><div id="selection-name" class="selection" hidden></div></section>
+<p id="state" role="status" aria-live="polite" data-i18n="processing"></p><p id="state-detail" data-i18n="connecting"></p>
 <section id="workflow-progress" hidden style="margin-top:12px;border-top:1px solid var(--figma-color-border,#ddd);padding-top:8px"><div id="workflow-step" class="name"></div><div id="workflow-last" class="label"></div></section>
-<section id="approval" hidden><p id="approval-reason"></p><details><summary>查看影响范围与脚本</summary><pre id="approval-details"></pre></details><button id="approve">允许本次修改</button> <button id="reject">取消本次修改</button></section>
-<section id="settings" hidden aria-label="可选扩展设置">
-  <header><h1>可选扩展</h1><button id="settings-close">返回</button></header>
-  <p id="settings-note">普通编辑功能可直接使用。扩展按需配置。</p>
+<section id="approval" hidden><p id="approval-reason"></p><details><summary data-i18n="scopeScript"></summary><pre id="approval-details"></pre></details><button id="approve" data-i18n="approve"></button> <button id="reject" data-i18n="reject"></button></section>
+<section id="settings" hidden data-i18n-aria="extensionSettings" aria-label="">
+  <header><h1 data-i18n="extensions"></h1><button id="settings-close" data-i18n="back"></button></header>
+  <p id="settings-note" data-i18n="ordinary"></p>
   <div id="extension-fields" hidden>
-    <label for="extension-choice">扩展</label><select id="extension-choice"></select>
+    <label for="extension-choice" data-i18n="extension"></label><select id="extension-choice"></select>
     <p id="extension-disclosure"></p>
-    <label for="extension-key">API key</label><input id="extension-key" type="password" autocomplete="off" spellcheck="false" placeholder="仅保存到本机">
-    <label><input id="extension-enabled" type="checkbox">启用扩展并允许上述上下文处理</label>
-    <div id="settings-actions"><button id="settings-save">保存</button><button id="settings-clear">清除已保存密钥</button></div>
+    <label for="extension-key">API key</label><input id="extension-key" type="password" autocomplete="off" spellcheck="false" data-i18n-placeholder="localKey" placeholder="">
+    <label><input id="extension-enabled" type="checkbox"><span data-i18n="enable"></span></label>
+    <div id="settings-actions"><button id="settings-save" data-i18n="save"></button><button id="settings-clear" data-i18n="clearKey"></button></div>
   </div>
   <p id="settings-message" role="status" aria-live="polite"></p>
 </section>
 <script>
+const i18n = (SESSION_I18N)(navigator.language);
+const { t } = i18n;
+document.documentElement.lang = i18n.locale;
+for (const node of document.querySelectorAll('[data-i18n]')) node.textContent = t(node.dataset.i18n);
+for (const node of document.querySelectorAll('[data-i18n-aria]')) node.setAttribute('aria-label', t(node.dataset.i18nAria));
+for (const node of document.querySelectorAll('[data-i18n-placeholder]')) node.placeholder = t(node.dataset.i18nPlaceholder);
+
 const config = SESSION_CONFIG;
 const client = Math.random().toString(36).slice(2) + Date.now();
 function connectionRoute(route) {
@@ -49,24 +56,24 @@ function connectionError(message, response) {
   return error;
 }
 function describeConnectionError(error) {
-  if (error?.name === 'TimeoutError' || /signal timed out|timed? ?out|timeout|超时/i.test(error?.message || '')) return '连接超时，正在自动恢复。';
-  return '连接暂时中断，正在自动恢复。';
+  if (error?.name === 'TimeoutError' || /signal timed out|timed? ?out|timeout|超时/i.test(error?.message || '')) return t('timeout');
+  return t('interrupted');
 }
 function showCurrentState() {
-  if (review) showState('请确认修改', '请在下方选择允许或取消。');
-  else if (lastFailure) showState('任务需检查', '回到 Agent 对话查看结果。');
-  else if (busy) showState('正在处理', pending ? '正在保存结果，请保持插件运行。' : 'Agent 正在处理当前目标。');
-  else if (targetIssue) showState('目标需调整', targetIssue);
-  else if (serverSessionId && !contextReady) showState('正在准备上下文', '已连接本机服务，正在读取当前设计。');
-  else showState('已连接', '回到 Agent 对话，直接描述需求。');
+  if (review) showState(t('confirm'), t('confirmDetail'));
+  else if (lastFailure) showState(t('checkTask'), t('checkResult'));
+  else if (busy) showState(t('processing'), pending ? t('saving') : t('agentWorking'));
+  else if (targetIssue) showState(t('adjustTarget'), targetIssue);
+  else if (serverSessionId && !contextReady) showState(t('preparing'), t('readingDesign'));
+  else showState(t('connected'), t('readyDetail'));
 }
 const maxResultBytes = 16 * 1024 * 1024 - 1024;
 const fitsResult = value => new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxResultBytes;
 function compactFailure(message, minimal = false) {
   const result = { id: message.id, ok: false,
-    error: '结果超过回传大小限制，已省略大字段；执行状态请结合修改前快照和独立读回核验',
+    error: t('resultLarge'),
     executionStarted: typeof message.executionStarted === 'boolean' ? message.executionStarted : activeOperation === 'run',
-    recovery: '保留已有证据，缩小目标后独立 inspect；禁止重放脚本' };
+    recovery: t('recovery') };
   for (const field of ['bindingVerified', 'undoBoundaries']) if (message[field] !== undefined) result[field] = message[field];
   if (!minimal) for (const field of ['after', 'before']) {
     if (message[field] === undefined) continue;
@@ -85,9 +92,9 @@ const request = async (route, options = {}) => {
     panel.hidden = true;
     if (raw) try {
       const progress = JSON.parse(decodeURIComponent(raw));
-      const labels = { ready: '已就绪', running: '执行中', waiting: '等待结果', failed: '检查未通过', 'needs-review': '需要恢复核验', 'awaiting-review': '等待人工验收', done: '已完成' };
+      const labels = { ready: t('ready'), running: t('running'), waiting: t('waiting'), failed: t('failed'), 'needs-review': t('needsReview'), 'awaiting-review': t('awaitingReview'), done: t('done') };
       document.getElementById('workflow-step').textContent = `${progress.current}/${progress.total} · ${progress.target} · ${labels[progress.state] || progress.state}`;
-      document.getElementById('workflow-last').textContent = `${progress.mode === 'static' ? '静态设计' : '交互原型'} · ${progress.failure ? `${progress.failure.property}：预期 ${progress.failure.expected}，实际 ${progress.failure.actual}` : progress.previous || progress.title}`;
+      document.getElementById('workflow-last').textContent = `${progress.mode === 'static' ? t('static') : t('prototype')} · ${progress.failure ? t('assertion', progress.failure) : (progress.previousTitle ? t('passed', {title: progress.previousTitle}) : progress.previous ? t('passed', {title: progress.previous.replace(/：已通过$/, '')}) : progress.title)}`;
       panel.hidden = false;
     } catch { /* 不把损坏或其他版本的进度当作已完成。 */ }
   }
@@ -105,10 +112,10 @@ let availableExtensions = [], settingsSaving = false;
 function showExtension() {
   const selected = availableExtensions.find(item => item.id === document.getElementById('extension-choice').value);
   if (!selected) return;
-  document.getElementById('extension-disclosure').textContent = selected.disclosure || selected.error || '';
+  document.getElementById('extension-disclosure').textContent = selected.error ? i18n.error(selected.error) : selected.disclosureI18n?.[i18n.locale] || selected.disclosure || '';
   const key = document.getElementById('extension-key');
   key.value = '';
-  key.placeholder = selected.configured ? '已配置，留空保留；调用时验证' : '仅保存到本机';
+  key.placeholder = selected.configured ? t('configuredKey') : t('localKey');
   document.getElementById('extension-enabled').checked = selected.enabled;
   document.getElementById('settings-save').disabled = !!selected.error;
 }
@@ -122,20 +129,20 @@ function renderExtensions(data, selectedId = document.getElementById('extension-
   }
   if (availableExtensions.some(item => item.id === selectedId)) select.value = selectedId;
   document.getElementById('extension-fields').hidden = availableExtensions.length === 0;
-  document.getElementById('settings-note').textContent = availableExtensions.length ? '密钥仅保存在本机，普通编辑流程保持可用。' : '当前使用普通版。需要可选能力时，让 Agent 安装可信的本地扩展。';
+  document.getElementById('settings-note').textContent = availableExtensions.length ? t('keysNote') : t('noExtensions');
   showExtension();
 }
 document.getElementById('extension-choice').onchange = showExtension;
 document.getElementById('settings-open').onclick = async () => {
   document.getElementById('settings').hidden = false;
-  document.getElementById('settings-message').textContent = '正在读取设置…';
+  document.getElementById('settings-message').textContent = t('loadingSettings');
   try {
     const response = await request('/extensions');
     const data = await response.json();
-    if (!response.ok) throw Error(data.error || '设置暂不可用');
+    if (!response.ok) throw Error(data.error || t('settingsUnavailable'));
     renderExtensions(data);
     document.getElementById('settings-message').textContent = '';
-  } catch { document.getElementById('settings-message').textContent = '设置暂不可用，请检查本机连接。'; }
+  } catch { document.getElementById('settings-message').textContent = t('settingsConnection'); }
 };
 document.getElementById('settings-close').onclick = () => {
   document.getElementById('extension-key').value = '';
@@ -157,10 +164,10 @@ async function saveSettings(clearApiKey = false) {
   try {
     const response = await request('/extensions', { method: 'POST', body: JSON.stringify(body) });
     const data = await response.json();
-    if (!response.ok) throw Error(data.error || '设置保存失败');
+    if (!response.ok) throw Error(data.error || t('saveFailed'));
     renderExtensions(data, body.id);
-    document.getElementById('settings-message').textContent = enabled ? '设置已保存。可以让 Agent 使用扩展。' : '设置已保存，继续使用普通流程。';
-  } catch (error) { document.getElementById('settings-message').textContent = error.message; }
+    document.getElementById('settings-message').textContent = enabled ? t('savedEnabled') : t('savedStandard');
+  } catch (error) { document.getElementById('settings-message').textContent = i18n.error(error.message); }
   finally {
     settingsSaving = false;
     document.getElementById('settings-save').disabled = !!availableExtensions.find(item => item.id === body.id)?.error;
@@ -178,12 +185,12 @@ async function decide(approved) {
   const current = review;
   try {
     const response = await request('/approve', { method: 'POST', body: JSON.stringify({ id: current.id, scriptHash: current.scriptHash, approved }) });
-    if (!response.ok) throw Error('确认尚未保存，请检查终端并重试同一决定');
+    if (!response.ok) throw Error(t('confirmNotSaved'));
     const decision = await response.json();
     review = null; document.getElementById('approval').hidden = true;
     parent.postMessage({ pluginMessage: { type: 'approval-ack', id: current.id, channelNonce, approved: decision.approved === true } }, '*');
     showCurrentState();
-  } catch { showState('请确认修改', '确认未保存，请再试一次。'); }
+  } catch { showState(t('confirm'), t('confirmRetry')); }
   finally { deciding = false; }
 }
 document.getElementById('approve').onclick = () => decide(true);
@@ -194,19 +201,19 @@ window.onmessage = async event => {
   if (message?.type === 'serialized-result') {
     if (!channelNonce || message.channelNonce !== channelNonce || message.id !== activeId || typeof message.serialized !== 'string') return;
     try { message = JSON.parse(message.serialized); }
-    catch { pending = { id: activeId, ok: false, executionStarted: activeOperation === 'run', error: '结果无法解析，请检查当前画布，禁止重放' }; return; }
+    catch { pending = { id: activeId, ok: false, executionStarted: activeOperation === 'run', error: t('parseFailure') }; return; }
   }
   if (contextNonce && message?.type === 'context-update' && message.contextNonce === contextNonce) {
     pendingContext = message.context;
     const selected = message.context?.selection || [];
     const selectionName = document.getElementById('selection-name');
     selectionName.hidden = selected.length === 0;
-    selectionName.textContent = selected.length === 1 ? '已选：' + selected[0].name : selected.length ? '已选 ' + selected.length + ' 项' : '';
+    selectionName.textContent = selected.length === 1 ? t('selected', {name: selected[0].name}) : selected.length ? t('selectedCount', {count: selected.length}) : '';
     return;
   }
   if (contextNonce && message?.type === 'target-info' && message.contextNonce === contextNonce) {
-    document.getElementById('target-name').textContent = message.name || '目标暂不可用';
-    targetIssue = message.issue || null;
+    document.getElementById('target-name').textContent = message.nameKey ? t(message.nameKey) : message.name || t('unavailableTarget');
+    targetIssue = message.issueKey ? t(message.issueKey) : message.issue ? i18n.localize(message.issue) : null;
     return;
   }
   if (!channelNonce || message?.channelNonce !== channelNonce || message.id !== activeId) return;
@@ -215,7 +222,7 @@ window.onmessage = async event => {
     document.getElementById('settings').hidden = true;
     review = message;
     document.getElementById('approval-reason').textContent = message.reason;
-    document.getElementById('approval-details').textContent = `原因：${message.reason}\n文件：${message.binding.fileKey}\n节点：${message.binding.nodeId}\n脚本 hash：${message.scriptHash}\n\n${message.code}`;
+    document.getElementById('approval-details').textContent = t('approvalDetails', {reason: message.reason, file: message.binding.fileKey, node: message.binding.nodeId, hash: message.scriptHash, code: message.code});
     document.getElementById('approval').hidden = false;
     document.getElementById('approval').scrollIntoView?.({block:'start'});
     showCurrentState();
@@ -245,9 +252,9 @@ async function reportVisibility() {
   polling = true;
   try {
     const response = await request(connectionRoute('/heartbeat'));
-    if (!response.ok) throw connectionError('心跳失败，请检查桥接；保留当前任务，禁止重放', response);
+    if (!response.ok) throw connectionError(t('heartbeatFailed'), response);
   } catch (error) {
-    showState(error.needsAction ? '连接需检查' : '正在恢复连接', error.needsAction ? '请保持插件运行，回到 Agent 对话检查。' : describeConnectionError(error));
+    showState(error.needsAction ? t('checkConnection') : t('reconnecting'), error.needsAction ? t('keepRunning') : describeConnectionError(error));
   } finally {
     polling = false;
     if (visibilitySignalPending) void reportVisibility();
@@ -261,23 +268,23 @@ setInterval(async () => {
   try {
     if (busy) {
       const heartbeat = await request(connectionRoute('/heartbeat'));
-      if (!heartbeat.ok) throw connectionError('心跳失败，请检查桥接；保留当前任务，禁止重放', heartbeat);
+      if (!heartbeat.ok) throw connectionError(t('heartbeatFailed'), heartbeat);
     }
     if (pending) {
       const response = await request('/complete', { method: 'POST', body: JSON.stringify(pending) });
       if (response.status === 413) {
         pending = compactFailure(pending, true);
-        throw connectionError('结果体积被拒绝；保留任务，下轮保存精简失败证据，禁止重放', response);
+        throw connectionError(t('rejectedLarge'), response);
       }
-      if (!response.ok) throw connectionError('结果未被保存，请保持插件运行并让 Agent 检查', response);
-      if (!pending.ok) lastFailure = pending.error || '本次任务未完成';
+      if (!response.ok) throw connectionError(t('unsavedResult'), response);
+      if (!pending.ok) lastFailure = pending.error || t('incomplete');
       pending = null; busy = false; activeId = null; channelNonce = null; activeOperation = null;
     }
     if (!busy) {
       // getRandomValues 可用于桌面插件的非安全 iframe；在领取任务前生成凭证。
       const nextNonce = randomNonce();
       const response = await request(connectionRoute('/poll'));
-      if (!response.ok) throw connectionError('连接尚未恢复，请让 Agent 检查本机服务；保留当前任务', response);
+      if (!response.ok) throw connectionError(t('notRecovered'), response);
       const job = await response.json();
       if (!contextNonce) {
         contextNonce = nextNonce;
@@ -291,7 +298,7 @@ setInterval(async () => {
       if (response.ok && pendingContext === current) { pendingContext = null; contextReady = !current.error; }
     }
     showCurrentState();
-  } catch (error) { showState(error.needsAction ? '连接需检查' : '正在恢复连接', error.needsAction ? '请保持插件运行，回到 Agent 对话检查。' : describeConnectionError(error)); }
+  } catch (error) { showState(error.needsAction ? t('checkConnection') : t('reconnecting'), error.needsAction ? t('keepRunning') : describeConnectionError(error)); }
   finally {
     polling = false;
     if (visibilitySignalPending) void reportVisibility();

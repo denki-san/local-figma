@@ -28,10 +28,14 @@ async function manifest(directory) {
       typeof value.entry !== 'string' || !/^[a-zA-Z0-9_-]+\.mjs$/.test(value.entry) ||
       typeof value.apiKeyEnv !== 'string' || !/^[A-Z][A-Z0-9_]{1,79}$/.test(value.apiKeyEnv) ||
       typeof value.disclosure !== 'string' || !value.disclosure.trim() || value.disclosure.length > 1000) throw Error('本地扩展清单无效或版本不兼容');
+  // 扩展声明可以提供双语版本；旧扩展继续使用原始声明。
+  const disclosureI18n = value.disclosureI18n;
+  if (disclosureI18n !== undefined && (!disclosureI18n || typeof disclosureI18n !== 'object' || Array.isArray(disclosureI18n) ||
+      Object.entries(disclosureI18n).some(([locale, text]) => !['en', 'zh-CN'].includes(locale) || typeof text !== 'string' || !text.trim() || text.length > 1000))) throw Error('扩展双语声明无效');
   const entry = await fs.realpath(path.join(base, value.entry));
   if (path.dirname(entry) !== base) throw Error('扩展入口需要位于安装目录内');
   return { id: value.id, name: value.name, apiVersion: 1, entry, directory: base,
-    apiKeyEnv: value.apiKeyEnv, disclosure: value.disclosure };
+    apiKeyEnv: value.apiKeyEnv, disclosure: value.disclosure, ...(disclosureI18n ? {disclosureI18n} : {}) };
 }
 
 async function credentials(cwd) {
@@ -63,7 +67,7 @@ export async function listExtensions(cwd, { env = process.env } = {}) {
     try {
       const { definition } = await installed(cwd, id);
       const configured = !!resolveKey(definition, stored, env);
-      extensions.push({ id, name: definition.name, disclosure: definition.disclosure, enabled: settings.enabled,
+      extensions.push({ id, name: definition.name, disclosure: definition.disclosure, ...(definition.disclosureI18n ? {disclosureI18n: definition.disclosureI18n} : {}), enabled: settings.enabled,
         allowRemoteContext: settings.allowRemoteContext, configured, ready: settings.enabled && settings.allowRemoteContext && configured });
     } catch { extensions.push({ id, name: id, enabled: false, configured: false, ready: false, error: '扩展文件需要检查，普通编辑功能可继续使用' }); }
   }
