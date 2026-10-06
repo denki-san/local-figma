@@ -24,9 +24,15 @@ figma-local extension remove example-addon
   "name": "示例扩展",
   "entry": "index.mjs",
   "apiKeyEnv": "EXAMPLE_ADDON_API_KEY",
-  "disclosure": "当前任务的文字和结构摘要会发送给该扩展的服务提供方。"
+  "disclosure": "当前任务的文字和结构摘要会发送给该扩展的服务提供方。",
+  "disclosureI18n": {
+    "zh-CN": "当前任务的文字和结构摘要会发送给该扩展的服务提供方。",
+    "en": "Task text and structure summaries are sent to this extension's service provider."
+  }
 }
 ```
+
+`disclosureI18n` 可选，支持 `zh-CN` 和 `en`，每项最多 1000 字符。插件按界面语言选择，缺失时保留扩展原始 `disclosure`；扩展名称保持原文。插件目前没有可靠的 Figma 界面语言 API，因此按浏览器语言选择：中文环境显示简体中文，其余显示英文。
 
 入口导出 `async execute({cwd,args,settings,credentials,runtime})`，返回 `{exitCode,output}`。`args` 是扩展编号后的参数；`settings.allowRemoteContext` 表示用户已启用并允许说明中的处理；`credentials.apiKey` 仅供扩展在进程内使用。`runtime` 提供 `json`、`root`、`save`、`waitForResult`、`textOperation`、`fillOperation`，可继续复用原桥接和证据记录。运行方式为 `figma-local example-addon ...`，扩展不能覆盖内建命令。
 

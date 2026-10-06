@@ -1,6 +1,6 @@
 # 快速开始
 
-local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原生图层。准备 macOS、Node.js 22+、Figma Desktop，以及目标文件的编辑权限。首次连接使用含 `node-id` 的 Figma 链接；安装包从 [GitHub Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.3) 下载。
+local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原生图层。准备 macOS、Node.js 22+、Figma Desktop，以及目标文件的编辑权限。首次连接使用含 `node-id` 的 Figma 链接；安装包从 [GitHub Release](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.4) 下载。
 
 把链接和需求发给 Agent，复制文本见[向 Agent 提任务](first-task.md)。以下命令供 Agent 或自行操作的开发者使用。
 
@@ -9,7 +9,7 @@ local-figma 让 Agent 在你指定的 Figma 文件中读取、修改和预览原
 从 Release 下载 `.tgz` 后安装；在仓库源码目录也可运行 `npm install -g .`。
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
+npm install -g ./figma-local-runtime-0.1.0-alpha.4.tgz
 figma-local help
 ```
 

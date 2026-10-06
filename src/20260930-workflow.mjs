@@ -94,7 +94,7 @@ export async function readProgress(cwd) {
     const bounded = value => String(typeof value === 'string' ? value : JSON.stringify(value)).slice(0, 80);
     const failure = failed ? { property: bounded(failed.property), expected: bounded(failed.expected), actual: bounded(failed.actual) } : null;
     return { id: j.plan.id, title: j.plan.title, mode: j.plan.capabilities.length ? 'prototype' : 'static', current: index < 0 ? j.steps.length : index + 1, total: j.steps.length,
-      target: current?.title, state: j.state, ...(failure ? { failure } : {}), previous: prior ? `${prior.title}：已通过` : '', updatedAt: j.updatedAt };
+      target: current?.title, state: j.state, ...(failure ? { failure } : {}), previousTitle: prior?.title || '', previous: prior ? `${prior.title}：已通过` : '', updatedAt: j.updatedAt };
   } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
 async function lock(cwd) {

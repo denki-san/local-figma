@@ -131,3 +131,33 @@ test('含引号及反斜杠的密钥在嵌套值、字段名和异常 JSON 文�
   assert.equal(result.output.json, '{"key":"[已隐藏]"}');
   await assert.rejects(runExtension(cwd, 'test-addon', ['throw']), error => error.message === '{"key":"[已隐藏]"}');
 });
+
+test('扩展双语声明按清单原文透传，旧扩展保持原有声明', async t => {
+  const { cwd, directory } = await fixture(t);
+  const file = path.join(directory, 'local-figma-extension.json');
+  const definition = await json(file);
+  const disclosureI18n = { en: 'Shares the current task summary.', 'zh-CN': '发送当前任务摘要。' };
+  await fs.writeFile(file, JSON.stringify({ ...definition, disclosureI18n }));
+  await addExtension(cwd, directory);
+  const item = (await listExtensions(cwd)).extensions[0];
+  assert.deepEqual(item.disclosureI18n, disclosureI18n);
+  assert.equal(item.disclosure, definition.disclosure);
+  await fs.writeFile(file, JSON.stringify(definition));
+  const legacy = (await listExtensions(cwd)).extensions[0];
+  assert.equal(legacy.disclosure, definition.disclosure);
+  assert.equal(legacy.disclosureI18n, undefined);
+});
+
+test('双语声明拒绝未知语言、数组、空白及非文字，允许1000字符边界', async t => {
+  const { cwd, directory } = await fixture(t);
+  const file = path.join(directory, 'local-figma-extension.json');
+  const definition = await json(file);
+  for (const disclosureI18n of [{ fr: 'Bonjour' }, { 'en-US': 'English' }, [], null, 'text', { en: 3 }, { en: '' }, { en: '  ' }, { 'zh-CN': '界'.repeat(1001) }]) {
+    await fs.writeFile(file, JSON.stringify({ ...definition, disclosureI18n }));
+    await assert.rejects(addExtension(cwd, directory), /双语声明无效/);
+  }
+  const disclosureI18n = { en: 'a'.repeat(1000), 'zh-CN': '界'.repeat(1000) };
+  await fs.writeFile(file, JSON.stringify({ ...definition, disclosureI18n }));
+  await addExtension(cwd, directory);
+  assert.deepEqual((await listExtensions(cwd)).extensions[0].disclosureI18n, disclosureI18n);
+});

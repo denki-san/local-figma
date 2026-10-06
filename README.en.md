@@ -33,12 +33,12 @@ Runs locally · Works with your Agent · Free and open source
 
 ## Download and install directly
 
-Requires **macOS, Node.js 22+ (including npm), and Figma Desktop**. Download [figma-local-runtime-0.1.0-alpha.3.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.3/figma-local-runtime-0.1.0-alpha.3.tgz); no repository clone or build is needed. Choose the `.tgz` release asset, not GitHub's “Source code” archives.
+Requires **macOS, Node.js 22+ (including npm), and Figma Desktop**. Download [figma-local-runtime-0.1.0-alpha.4.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.4/figma-local-runtime-0.1.0-alpha.4.tgz); no repository clone or build is needed. Choose the `.tgz` release asset, not GitHub's “Source code” archives.
 
 Open a terminal in the download directory and run:
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
+npm install -g ./figma-local-runtime-0.1.0-alpha.4.tgz
 figma-local help
 mkdir -p ~/figma-local-project
 cd ~/figma-local-project
@@ -139,13 +139,13 @@ Send the new selection link to your Agent. It will verify the target and reconne
 
 ## Download and further help
 
-Current preview release: **[v0.1.0-alpha.3](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.3)**. Share this page with your Agent to get started.
+Current preview release: **[v0.1.0-alpha.4](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.4)**. Share this page with your Agent to get started.
 
 - Verified multi-step tasks: [workflow plans, assertions, and recovery](docs/20260930-workflows.md)
 - More ways to phrase a request: [task examples](docs/first-task.md)
 - Installation and workflow instructions for Agents: [Agent guide](docs/agent-quickstart.md)
 - Run the commands yourself: [manual setup guide](docs/quickstart.md)
 - Build an extension: [extension interfaces](docs/extensions.md)
-- Version changes and data handling: [release notes](docs/releases/20261001-alpha-3.md) · [security](SECURITY.md)
+- Version changes and data handling: [release notes](docs/releases/20261006-alpha-4.md) · [security](SECURITY.md)
 
 Licensed under [Apache-2.0](LICENSE).

@@ -50,12 +50,12 @@ test('轻量面板从绑定解析目标名称，提示越界选区与错误文�
   f.figma.getNodeByIdAsync=async()=>target;
   await f.figma.ui.onmessage({type:'context-request',contextNonce:'panel',binding:{fileKey:'example',nodeId:'1:2'}});await flush();
   let info=f.messages.filter(m=>m.type==='target-info').at(-1);
-  assert.equal(info.name,'目标卡片');assert.equal(info.issue,null);
+  assert.equal(info.name,'目标卡片');assert.equal(info.issueKey,null);
   f.page.selection=[{id:'1:9',type:'RECTANGLE',parent:f.page}];
   f.events.get('selectionchange')();await flush();
-  info=f.messages.filter(m=>m.type==='target-info').at(-1);assert.match(info.issue,/超出目标范围/);
+  info=f.messages.filter(m=>m.type==='target-info').at(-1);assert.equal(info.issueKey,'outside');
   f.figma.fileKey='other';f.events.get('currentpagechange')();await flush();
-  assert.match(f.messages.filter(m=>m.type==='target-info').at(-1).issue,/当前文件与目标不一致/);
+  assert.equal(f.messages.filter(m=>m.type==='target-info').at(-1).issueKey,'wrongFile');
 });
 test('自动上下文先提供选区，再只读补充主组件、样式和填充变量',async()=>{
   const target={id:'1:2',type:'FRAME',name:'区域',children:[

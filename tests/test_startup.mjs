@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
+import vm from 'node:vm';
 import { init } from '../src/project.mjs';
 import { start } from '../src/bridge.mjs';
 
@@ -24,6 +25,18 @@ test('manifest 保存失败清除已生成的 UI 凭证，修复后可直接重�
   assert.match(ui, /修复后重新运行插件/);
   assert.match(ui, /var\(--figma-color-text/);
   assert(!ui.includes('X-Session-Token'));
+  for (const [language, expectedState, expectedDetail] of [
+    ['zh-CN', '连接未启动', '回到 Agent 对话排查，修复后重新运行插件。'],
+    ['en-US', 'Connection not started', 'Return to the Agent chat to troubleshoot, then run the plugin again.']
+  ]) {
+    const nodes = { state: {}, detail: {} };
+    const document = { documentElement: {}, querySelector: selector => selector === '[role="status"]' ? nodes.state : nodes.detail };
+    vm.runInNewContext(ui.match(/<script>([\s\S]*)<\/script>/)[1], { navigator: { language }, document });
+    assert.equal(nodes.state.textContent, expectedState);
+    assert.equal(nodes.detail.textContent, expectedDetail);
+    assert.equal(document.documentElement.lang, language === 'zh-CN' ? 'zh-CN' : 'en');
+  }
+
   await assert.rejects(fs.access(path.join(dir, 'bridge.lock')));
   await assert.rejects(fs.access(path.join(dir, 'session.json')));
   await fs.rmdir(manifest);

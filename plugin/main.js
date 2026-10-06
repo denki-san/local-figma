@@ -82,17 +82,17 @@ function publishContext() {
     const page = figma.currentPage;
     if (uiBinding) {
       const binding = uiBinding, nonce = contextNonce;
-      const report = (name, issue) => {
-        if (generation === contextGeneration && nonce === contextNonce) figma.ui.postMessage({type:'target-info',contextNonce:nonce,name,issue});
+      const report = (name, issueKey, nameKey) => {
+        if (generation === contextGeneration && nonce === contextNonce) figma.ui.postMessage({type:'target-info',contextNonce:nonce,name,issueKey,nameKey});
       };
-      if (binding.fileKey !== figma.fileKey) report('请打开已发送链接的文件', '当前文件与目标不一致，请回到目标文件运行插件。');
+      if (binding.fileKey !== figma.fileKey) report('', 'wrongFile', 'openFile');
       else figma.getNodeByIdAsync(binding.nodeId).then(node => {
-        if (!node || node.removed) return report('', '目标已不可用，请把新的目标链接发给 Agent。');
+        if (!node || node.removed) return report('', 'missingTarget');
         let parent = node;
         while (parent && parent.type !== 'PAGE') parent = parent.parent;
         const outside = page.selection.some(selected => !within(selected, binding.nodeId));
-        report(node.name, parent?.id !== page.id ? '请切回目标所在页面后继续。' : outside ? '当前选区超出目标范围。请选择范围内内容，或把新链接发给 Agent。' : null);
-      }).catch(() => report('', '暂时无法读取目标，请让 Agent 检查连接。'));
+        report(node.name, parent?.id !== page.id ? 'wrongPage' : outside ? 'outside' : null);
+      }).catch(() => report('', 'unreadable'));
     }
     const selection = page.selection.slice(0, 100);
     const candidates = new Map();

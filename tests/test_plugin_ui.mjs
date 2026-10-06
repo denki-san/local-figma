@@ -1,50 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import vm from 'node:vm';
-import crypto from 'node:crypto';
+import { fixture } from './helpers/test_20261006_plugin_ui_fixture.mjs';
+export { fixture } from './helpers/test_20261006_plugin_ui_fixture.mjs';
 
 const html = await fs.readFile(new URL('../plugin/ui.html', import.meta.url), 'utf8');
 test('常驻面板仅保留目标、状态和按需确认，隐藏重复说明', () => {
-  assert.match(html, /当前目标/);
+  assert.match(html, /data-i18n="target"/);
   assert.match(html, /id="selection-name" class="selection" hidden/);
   assert.doesNotMatch(html, /<footer>/);
   assert.doesNotMatch(html, /目标范围/);
 });
-function fixture() {
-  const calls = [], deliveries = [], responses = [];
-  const state = { textContent: '' };
-  const elements = new Map([['state', state]]);
-  const document = { visibilityState: 'visible' };
-  let visibilityChange;
-  const element = id => {
-    if (!elements.has(id)) {
-      const value = { value: '', appendChild(option) { if (!this.value) this.value = option.value; } };
-      if (id === 'extension-choice') Object.defineProperty(value, 'textContent', { set() { this.value = ''; } });
-      elements.set(id, value);
-    }
-    return elements.get(id);
-  };
-  let tick;
-  const contexts = [];
-  const parent = { postMessage: message => (message.pluginMessage.type === 'context-request' ? contexts : deliveries).push(message) };
-  const window = {};
-  vm.runInNewContext(html.match(/<script>([\s\S]*)<\/script>/)[1].replace('SESSION_CONFIG', JSON.stringify({ port: 1234, token: 'test' })), {
-    parent, window, crypto: { getRandomValues: values => crypto.getRandomValues(values) }, document: Object.assign(document, { getElementById: element, createElement: () => ({}), addEventListener: (name, callback) => { if (name === 'visibilitychange') visibilityChange = callback; } }),
-    AbortSignal, TextEncoder, setInterval: callback => { tick = callback; },
-    fetch: async (url, options) => {
-      calls.push({ url, options });
-      const response = await responses.shift();
-      if (response instanceof Error) throw response;
-      return { ok: response?.ok ?? true, status: response?.status ?? 200, headers: { get: name => name === 'X-Figma-Workflow' ? response?.progress ?? null : response?.session ?? null }, json: async () => response?.body ?? null };
-    }
-  });
-  return { calls, deliveries, contexts, responses, tick: () => tick(), state, element,
-    visibilityChange: async visibility => { document.visibilityState = visibility; await visibilityChange?.(); },
-    complete: (message, source = parent) => window.onmessage({ source, data: { pluginMessage: {
-      channelNonce: deliveries[0]?.pluginMessage.channelNonce, ...message
-  } } }) };
-}
 test('插件隐藏时立即报告后台状态，恢复后心跳携带前台状态', async () => {
   const f = fixture();
   await f.visibilityChange('hidden');
