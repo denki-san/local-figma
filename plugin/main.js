@@ -103,7 +103,11 @@ function publishContext() {
     }
     const target = candidates.size === 1 ? [...candidates.values()][0] : null;
     const context = { fileKey: figma.fileKey, pageId: page.id, pageName: page.name,
-      selection: selection.map(node => ({ id: node.id, name: node.name, type: node.type, parentId: node.parent?.id, parentType: node.parent?.type })),
+      selection: selection.map(node => {
+        let layoutScope = node;
+        while (['HORIZONTAL','VERTICAL','GRID'].includes(layoutScope.parent?.layoutMode)) layoutScope = layoutScope.parent;
+        return { id: node.id, name: node.name, type: node.type, parentId: node.parent?.id, parentType: node.parent?.type, layoutScopeNodeId: layoutScope.id };
+      }),
       target: target ? tree(target, 0, { count: 0, maxDepth: 1 }) : null,
       needsSelection: !target, revision: generation * 4, capturedAt: Date.now(), resources: { state: target ? 'loading' : 'needs-selection' } };
     figma.ui.postMessage({ type: 'context-update', contextNonce, context });

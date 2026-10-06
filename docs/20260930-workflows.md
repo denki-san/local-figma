@@ -32,14 +32,26 @@ Example plan:
         "properties": {
           "name": "Card",
           "width": 320,
-          "height": 180,
           "fill": "#FFFFFF",
-          "cornerRadius": 16
+          "cornerRadius": 16,
+          "layoutMode": "VERTICAL",
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "HUG",
+          "itemSpacing": 12,
+          "paddingTop": 20,
+          "paddingRight": 20,
+          "paddingBottom": 20,
+          "paddingLeft": 20,
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN"
         }
       },
       "assertions": [
         { "property": "type", "equals": "FRAME" },
-        { "property": "childCount", "equals": 0 }
+        { "property": "childCount", "equals": 0 },
+        { "property": "layoutMode", "equals": "VERTICAL" },
+        { "property": "layoutSizingVertical", "equals": "HUG" },
+        { "property": "paddingLeft", "equals": 20 }
       ],
       "humanReview": true
     },
@@ -53,13 +65,15 @@ Example plan:
         "properties": {
           "name": "Title",
           "characters": "Your collection",
-          "x": 20,
-          "y": 20,
-          "fontSize": 24
+          "fontSize": 24,
+          "layoutSizingHorizontal": "FILL",
+          "textAutoResize": "HEIGHT"
         }
       },
       "assertions": [
-        { "property": "characters", "equals": "Your collection" }
+        { "property": "characters", "equals": "Your collection" },
+        { "property": "layoutSizingHorizontal", "equals": "FILL" },
+        { "property": "textAutoResize", "equals": "HEIGHT" }
       ]
     }
   ]
@@ -92,17 +106,36 @@ To upgrade a static design, import a new plan ID with the needed capabilities an
 | `scroll` | `direction` | Sets NONE, HORIZONTAL, VERTICAL, or HORIZONTAL_AND_VERTICAL; requires `scroll`. |
 | `connect` | `destination`, optional `navigation`, `animate` | Replaces all ON_CLICK reactions with one action; records the previous/current reactions and preserves other triggers. NAVIGATE is the default; OVERLAY requires `overlay`. `animate: true` requires `smartAnimate`. |
 
-Properties: `name`, `x`, `y`, `width`, `height`, `opacity`, `visible`, `cornerRadius`, `characters`, `fontSize`, `fontFamily`, `fontStyle`, and solid `fill` in `#RRGGBB` format. Editing text preserves its existing font unless a font override is supplied. Figma may normalize dimensions or other values; postconditions detect the resulting difference.
+Appearance and content properties: `name`, `x`, `y`, `width`, `height`, `opacity`, `visible`, `cornerRadius`, `characters`, `fontSize`, `fontFamily`, `fontStyle`, and solid `fill` in `#RRGGBB` format. Editing text preserves its existing font unless a font override is supplied. Figma may normalize dimensions or other values; postconditions detect the resulting difference.
 
-This first version intentionally supports a bounded set of operations. Existing commands and trusted scripts remain available for UI Kit imports, complex Auto Layout, instances, and other operations not in this schema. Arbitrary scripts are not advertised as idempotent workflows.
+Auto Layout properties are supported by `create` and `update`:
+
+| Properties | Accepted values |
+| --- | --- |
+| `layoutMode` | `NONE`, `HORIZONTAL`, `VERTICAL` |
+| `layoutSizingHorizontal`, `layoutSizingVertical` | `FIXED`, `HUG`, `FILL` |
+| `itemSpacing` | A finite number from 0 to 10000 |
+| `paddingTop`, `paddingRight`, `paddingBottom`, `paddingLeft` | Finite numbers from 0 to 10000 |
+| `primaryAxisAlignItems` | `MIN`, `CENTER`, `MAX`, `SPACE_BETWEEN` |
+| `counterAxisAlignItems` | `MIN`, `CENTER`, `MAX` |
+| `layoutPositioning` | `AUTO`, `ABSOLUTE` |
+| `textAutoResize` | `NONE`, `WIDTH_AND_HEIGHT`, `HEIGHT`, `TRUNCATE` |
+
+Layout direction, spacing, padding, alignment, and Hug sizing apply to Auto Layout containers. Fill sizing requires a child of an Auto Layout container. Hug also supports standalone text nodes; text sizing and `textAutoResize` changes load the existing font before writing. `layoutPositioning` controls how a child participates in its parent's Auto Layout; `textAutoResize` applies to text. Use fixed widths with height-resizing text for wrapping, or Fill width inside Auto Layout. A width or height write must agree with the resulting sizing mode; choose `FIXED` when setting that dimension explicitly.
+
+Prefer Auto Layout for new cards, lists, forms, and button groups. Keep decorative or overlapping elements positioned as needed. Convert existing designs region by region after inspecting their structure. Verify editability with longer text, added or removed items, and a narrower container, using readback assertions and fresh previews.
+
+Existing commands and trusted scripts remain available for UI Kit imports, instances, and other operations not in this schema. Arbitrary scripts are not advertised as idempotent workflows.
 
 ## Targets and verification
+
+For layout or dimension edits inside Auto Layout, set the step scope to include the highest consecutive Auto Layout ancestor. Native reflow can move siblings or resize ancestors; a scope limited to the edited child is rejected before writing. The scope must remain inside the project binding.
 
 A step's optional `scopeNodeId` selects a subtree inside the project binding. Its `target` and assertion targets are resolved inside that subtree. Without a target, the scope root is used. A `create` target is the parent; its default assertion subject is the created node. Other operations assert against the edited node.
 
 A selector accepts `id`, `path` (an array of exact child names), and optional expected `name` and `type`. An existing ID takes priority and must pass those checks. If that ID is missing, an explicitly supplied path may resolve the replacement. Missing paths, duplicate names, unexpected types, and out-of-scope IDs stop execution. Renaming nodes requires updating subsequent selectors; paths are a fallback, not a promise that names are unique.
 
-Each step requires assertions. Available properties include `exists`, `name`, `type`, `childCount`, `fill`, dimensions, position, `visible`, `opacity`, `characters`, `fontSize`, `reactionCount`, and `overflowDirection`. `exists` supports only `equals: true`; missing targets fail during resolution, and `exists: false` is rejected before execution. Use `equals` and optional numeric `tolerance`; fill assertions use uppercase hex. Declared operation properties also become automatic postconditions, so an `exists` assertion cannot hide a partial property update. Visual and interaction reviews remain separately unverified.
+Each step requires assertions. Available properties include `exists`, `name`, `type`, `childCount`, `fill`, dimensions, position, `visible`, `opacity`, `characters`, `fontSize`, `reactionCount`, and `overflowDirection`, as well as every Auto Layout property listed above. `exists` supports only `equals: true`; missing targets fail during resolution, and `exists: false` is rejected before execution. Use `equals` and optional numeric `tolerance`; fill assertions use uppercase hex. Declared operation properties also become automatic postconditions, so an `exists` assertion cannot hide a partial property update. Visual and interaction reviews remain separately unverified.
 
 Workflow steps retain existing snapshot limits. Use a local `scopeNodeId` for large files; workflows do not bypass the full-snapshot budget or claim to verify an entire large page from a truncated snapshot.
 
