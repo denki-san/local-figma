@@ -24,10 +24,15 @@ export function parseArguments(values) {
       if (command !== 'font' || key in fontValues || !raw?.trim() || raw.startsWith('--')) throw Error('字体参数需要唯一的非空值');
       if (key === 'size' && !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw)) throw Error('字号需要有效数值');
       fontValues[key] = key === 'size' ? Number(raw) : raw;
-    } else if (['--width', '--height', '--gap', '--padding'].includes(value)) {
-      const key = value.slice(2), raw = args[++i];
+    } else if (['--width', '--height', '--gap', '--padding', '--padding-top', '--padding-right', '--padding-bottom', '--padding-left'].includes(value)) {
+      const key = value.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase()), raw = args[++i];
       if (command !== 'layout' || key in layoutValues || !/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw || '')) throw Error('布局参数需要唯一的非负数值');
       layoutValues[key] = Number(raw);
+    } else if (['--direction', '--horizontal-sizing', '--vertical-sizing', '--primary-align', '--counter-align'].includes(value)) {
+      const key = value.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase()), raw = args[++i];
+      const allowed = key === 'direction' ? ['none', 'horizontal', 'vertical'] : key.endsWith('Sizing') ? ['fixed', 'hug', 'fill'] : key === 'primaryAlign' ? ['min', 'center', 'max', 'space-between'] : ['min', 'center', 'max'];
+      if (command !== 'layout' || key in layoutValues || !allowed.includes(raw)) throw Error('布局参数枚举无效或重复：' + value);
+      layoutValues[key] = raw;
     } else if (value === '--timeout') {
       if (command !== 'wait' || timeoutSeconds !== undefined || !/^\d+$/.test(args[i + 1] || '')) throw Error('--timeout 仅用于 wait，需提供 1–300 秒');
       timeoutSeconds = Number(args[++i]);

@@ -1,3 +1,4 @@
+import { layoutFields, layoutEnums, layoutNumbers, validateLayoutProperties, applyLayoutProperties } from './20261006-layout.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -9,8 +10,8 @@ import { executeWorkflowStep } from './20260930-workflow-runtime.mjs';
 const identifier = s => typeof s === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(s);
 const object = v => v && typeof v === 'object' && !Array.isArray(v);
 const capabilities = ['navigation', 'scroll', 'overlay', 'smartAnimate'];
-const properties = ['name', 'x', 'y', 'width', 'height', 'opacity', 'visible', 'cornerRadius', 'characters', 'fontSize', 'fontFamily', 'fontStyle', 'fill'];
-const assertionProperties = ['exists', 'name', 'type', 'childCount', 'fill', 'width', 'height', 'x', 'y', 'visible', 'opacity', 'characters', 'fontSize', 'reactionCount', 'overflowDirection'];
+const properties = [...layoutFields, 'name', 'x', 'y', 'width', 'height', 'opacity', 'visible', 'cornerRadius', 'characters', 'fontSize', 'fontFamily', 'fontStyle', 'fill'];
+const assertionProperties = [...layoutFields, 'exists', 'name', 'type', 'childCount', 'fill', 'width', 'height', 'x', 'y', 'visible', 'opacity', 'characters', 'fontSize', 'reactionCount', 'overflowDirection'];
 function exact(value, keys, label) {
   if (!object(value) || Object.keys(value).some(k => !keys.includes(k))) throw Error(label + ' 含未知字段或格式无效');
 }
@@ -43,7 +44,9 @@ export function validatePlan(plan) {
     }
     const p = op.properties || {};
     exact(p, properties, '属性');
+    validateLayoutProperties(p);
     for (const [k, v] of Object.entries(p)) {
+      if (layoutFields.includes(k)) continue;
       if (['x', 'y', 'width', 'height', 'opacity', 'cornerRadius', 'fontSize'].includes(k)) {
         if (typeof v !== 'number' || !Number.isFinite(v) || (['width', 'height', 'fontSize'].includes(k) && v <= 0) || (k === 'cornerRadius' && v < 0) || (k === 'opacity' && (v < 0 || v > 1))) throw Error('数值属性无效：' + k);
       } else if (k === 'visible') { if (typeof v !== 'boolean') throw Error('visible 需为布尔值'); }
@@ -62,6 +65,8 @@ export function validatePlan(plan) {
     for (const a of s.assertions) {
       exact(a, ['target', 'property', 'equals', 'tolerance'], '断言'); selector(a.target);
       if (!assertionProperties.includes(a.property) || !['string', 'number', 'boolean'].includes(typeof a.equals) || (typeof a.equals === 'number' && !Number.isFinite(a.equals))) throw Error('断言属性或期望值无效');
+      if (a.property in layoutEnums && !layoutEnums[a.property].includes(a.equals)) throw Error('布局断言枚举无效');
+      if (layoutNumbers.includes(a.property) && (!Number.isFinite(a.equals) || a.equals < 0 || a.equals > 10000)) throw Error('布局断言数值无效');
       if (a.tolerance !== undefined && (typeof a.tolerance !== 'number' || !Number.isFinite(a.tolerance) || a.tolerance < 0 || typeof a.equals !== 'number')) throw Error('断言误差范围无效');
       if (a.property === 'exists' && a.equals !== true) throw Error('exists 仅支持 equals:true；目标缺失由寻址阶段报告');
       if (a.property === 'fill' && !/^#[0-9A-F]{6}$/.test(a.equals)) throw Error('填充断言使用大写 #RRGGBB');
@@ -74,7 +79,7 @@ const planFile = (cwd, id) => {
   return path.join(root(cwd), 'workflows', id + '.json');
 };
 export function stepCode(plan, step, bindingId, verifyOnly = false) {
-  return `return (${executeWorkflowStep.toString()})(figma, target, ${JSON.stringify({ step, key: bindingId + ':' + plan.id + ':' + step.id, capabilities: plan.capabilities, verifyOnly })});`;
+  return `return (${executeWorkflowStep.toString()})(figma, target, ${JSON.stringify({ step, key: bindingId + ':' + plan.id + ':' + step.id, capabilities: plan.capabilities, verifyOnly })}, (${applyLayoutProperties.toString()}));`;
 }
 // 日志是唯一事实源；面板通过当前任务指针读取同一份日志。
 export async function readProgress(cwd) {

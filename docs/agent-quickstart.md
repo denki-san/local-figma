@@ -48,6 +48,16 @@ Explain the intended scope briefly. Preserve the existing content and style wher
 
 ## 3. Execute semantic steps and verify results
 
+For new content containers, prefer native Auto Layout: use vertical stacks for card content, lists, and forms, and horizontal stacks for button groups and rows. Set the target screen size explicitly; choose Fixed, Hug, or Fill for each axis according to the content. Fill requires a child of an Auto Layout container; Hug requires an Auto Layout container. Use `textAutoResize: "HEIGHT"` for wrapping text with a controlled width. Decorative elements and overlays may use absolute positioning where their design needs it. Inspect existing designs and convert individual regions; switching an entire existing design to Auto Layout can move children and change dimensions.
+
+For a selected container, the layout command can establish Auto Layout and its sizing:
+
+```sh
+figma-local layout --direction vertical --horizontal-sizing fixed --vertical-sizing hug --width 320 --gap 12 --padding 20 --primary-align min --counter-align min
+```
+
+Use `--direction horizontal|vertical|none`, `--horizontal-sizing fixed|hug|fill`, `--vertical-sizing fixed|hug|fill`, `--primary-align min|center|max|space-between`, and `--counter-align min|center|max`. `--padding` applies to all sides; `--padding-top`, `--padding-right`, `--padding-bottom`, and `--padding-left` override individual sides. For a selected child of Auto Layout, the command uses the highest consecutive Auto Layout ancestor as its evidence scope so sibling reflow is included. Refresh plugin context if that ancestry changes. Read the command result, inspect the same node and reported layout scope, and verify the layout direction, sizing modes, spacing, padding, and alignment. For multi-step work, declare these properties and assertions in the workflow.
+
 For multi-step tasks, use the [verified workflow guide](20260930-workflows.md). Build the plan around meaningful units such as a component, a screen, or a refinement, with descriptive names and machine-checkable assertions. Users do not need to write the plan JSON.
 
 ```sh
@@ -73,7 +83,7 @@ For every submitted write, retain its job ID and read `wait` and `result` for th
 
 ## 4. Review and deliver
 
-Export and open a fresh preview after edits. Check layout, typography, content, and component consistency. For prototypes, click the main paths in Figma and verify navigation and overlays separately from machine assertions. Revisit earlier screens when later design decisions require consistent changes.
+Export and open a fresh preview after edits. Check layout, typography, content, and component consistency. For Auto Layout, construct representative card, list, and form examples and verify longer text, added or removed items, and a narrower container; inspect both the native layout properties and fresh previews after each change. Do not ask the user to supply examples when synthetic content is sufficient. For prototypes, click the main paths in Figma and verify navigation and overlays separately from machine assertions. Revisit earlier screens when later design decisions require consistent changes.
 
 Give the user a concise change summary, a result preview, and any remaining visual or interaction checks. Report separately what was submitted, executed, machine-verified, visually inspected, and accepted by the user.
 

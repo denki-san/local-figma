@@ -1,3 +1,4 @@
+import { commandLayoutProperties, applyLayoutProperties } from './20261006-layout.mjs';
 import { isNodeId } from './node-id.mjs';
 import { textOperation, fillOperation } from './edit-operations.mjs';
 // 高层操作由 Agent 调用；用户无需提供脚本或节点 ID。
@@ -132,32 +133,41 @@ export function selectedLayoutEdit(state, values) {
   if (!state?.connected || state.stale) throw Error('正在重连，稍后再修改');
   const selection = state.context?.selection;
   if (!Array.isArray(selection) || selection.length !== 1 || selection[0].type !== 'FRAME') throw Error('请先在 Figma 中选中一个独立 Frame');
-  const entries = Object.entries(values || {});
-  if (!entries.length) throw Error('至少指定 width、height、gap 或 padding 中的一项');
-  for (const [key, value] of entries) {
-    const size = ['width', 'height'].includes(key);
-    if (!['width', 'height', 'gap', 'padding'].includes(key) || !Number.isFinite(value) || value < (size ? 0.01 : 0) || value > (size ? 100000 : 10000)) throw Error('布局参数无效：尺寸需为 0.01–100000，间距需为 0–10000');
-  }
-  return { operation: 'run', targetNodeId: selection[0].id, code: `
+  const properties = commandLayoutProperties(values);
+  return { operation: 'run', targetNodeId: selection[0].layoutScopeNodeId || selection[0].id, code: `
+const selectedId = ${JSON.stringify(selection[0].id)};
+const selected = target.id === selectedId ? target : await figma.getNodeByIdAsync(selectedId);
 const expectedPage = ${JSON.stringify(state.context.pageId)};
-const values = ${JSON.stringify(values)};
-if (target.removed || target.type !== 'FRAME' || figma.currentPage.id !== expectedPage || figma.currentPage.selection.length !== 1 || figma.currentPage.selection[0].id !== target.id) throw Error('选择已变化，本次未修改');
-for (let node = target; node && node.type !== 'PAGE'; node = node.parent) {
+const properties = ${JSON.stringify(properties)};
+if (!selected || selected.removed || selected.type !== 'FRAME' || figma.currentPage.id !== expectedPage || figma.currentPage.selection.length !== 1 || figma.currentPage.selection[0].id !== selected.id) throw Error('选择已变化，本次未修改');
+for (let node = selected; node && node.type !== 'PAGE'; node = node.parent) {
   if (node.locked) throw Error('选中区域已锁定，本次未修改');
   if (['COMPONENT', 'COMPONENT_SET', 'INSTANCE'].includes(node.type)) throw Error('当前区域属于组件，请先确认组件修改范围');
 }
-if ((values.gap !== undefined || values.padding !== undefined) && !['HORIZONTAL', 'VERTICAL'].includes(target.layoutMode)) throw Error('间距仅用于已有的水平或垂直 Auto Layout');
-if (values.width !== undefined && ['HUG', 'FILL'].includes(target.layoutSizingHorizontal)) throw Error('宽度受自动布局控制，请先明确尺寸模式');
-if (values.height !== undefined && ['HUG', 'FILL'].includes(target.layoutSizingVertical)) throw Error('高度受自动布局控制，请先明确尺寸模式');
-if (values.width !== undefined || values.height !== undefined) target.resize(values.width ?? target.width, values.height ?? target.height);
-if (values.gap !== undefined) target.itemSpacing = values.gap;
-if (values.padding !== undefined) for (const key of ['paddingTop','paddingRight','paddingBottom','paddingLeft']) target[key] = values.padding;
-const after = { width: target.width, height: target.height, gap: target.itemSpacing, paddingTop: target.paddingTop, paddingRight: target.paddingRight, paddingBottom: target.paddingBottom, paddingLeft: target.paddingLeft };
-for (const [key, value] of Object.entries(values)) {
-  const keys = key === 'padding' ? ['paddingTop','paddingRight','paddingBottom','paddingLeft'] : [key];
-  if (keys.some(k => Math.abs(after[k] - value) > 0.001 || !Number.isFinite(after[k]))) throw Error('修改后布局读回不一致，请检查画布');
+let envelope = selected;
+while (['HORIZONTAL','VERTICAL','GRID'].includes(envelope.parent?.layoutMode)) envelope = envelope.parent;
+if (envelope.id !== target.id) throw Error('布局范围已变化，请刷新插件上下文后重试');
+const geometry = () => {
+  const entries = [];
+  const visit = n => { entries.push([n.id, JSON.stringify([n.x,n.y,n.width,n.height])]); for (const c of n.children || []) visit(c); };
+  visit(target); return new Map(entries);
+};
+const beforeGeometry = geometry();
+const applyLayout = (${applyLayoutProperties.toString()});
+applyLayout(selected, properties, false);
+// 布局重排会改变子节点位置，锁定内容和主组件先拒绝修改。
+if (Object.keys(properties).some(k => !['width','height'].includes(k))) {
+  if ((selected.children || []).some(n => n.locked || ['COMPONENT','COMPONENT_SET'].includes(n.type))) throw Error('布局重排包含受保护的子节点');
 }
-return { changedNodeIds: [target.id], operation: 'layout', after };
+applyLayout(selected, properties);
+const after = Object.fromEntries(Object.keys(properties).map(k => [k, selected[k]]));
+for (const [key, value] of Object.entries(properties)) {
+  if (typeof value === 'number' ? !Number.isFinite(after[key]) || Math.abs(after[key] - value) > 0.001 : after[key] !== value) throw Error('修改后布局读回不一致，请检查画布');
+}
+// 保留旧版命令读回字段。
+if ('itemSpacing' in after) after.gap = after.itemSpacing;
+const changedNodeIds = [...geometry()].filter(([id, value]) => id === selected.id || beforeGeometry.get(id) !== value).map(([id]) => id);
+return { changedNodeIds, layoutScopeNodeId: target.id, operation: 'layout', after };
 ` };
 }
 

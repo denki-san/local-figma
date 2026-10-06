@@ -1,5 +1,6 @@
+import { applyLayoutProperties } from './20261006-layout.mjs';
 // 此函数由 CLI 序列化，运行于 Figma 插件内；只操作传入的目标子树。
-export async function executeWorkflowStep(figma, root, task) {
+export async function executeWorkflowStep(figma, root, task, applyLayout = applyLayoutProperties) {
   const { step, key, capabilities, verifyOnly = false } = task;
   const inside = node => { for (let n = node; n; n = n.parent) if (n.id === root.id) return true; return false; };
   async function locate(selector = {}) {
@@ -27,6 +28,11 @@ export async function executeWorkflowStep(figma, root, task) {
   const operation = step.operation;
   let node = anchor, reused = false, reactionChange;
   if (operation.kind === 'create') {
+    if (!verifyOnly && ['HORIZONTAL','VERTICAL','GRID'].includes(anchor.layoutMode)) {
+      let envelope = anchor;
+      while (['HORIZONTAL','VERTICAL','GRID'].includes(envelope.parent?.layoutMode)) envelope = envelope.parent;
+      if (!inside(envelope)) throw Error('创建将重排步骤范围外的布局，请把 scopeNodeId 扩大到外层 Auto Layout 容器');
+    }
     if (!anchor.appendChild) throw Error('创建目标不能容纳子节点');
     const registry = JSON.parse(anchor.getSharedPluginData('localFigmaWorkflow', 'localFigmaOutputs') || '{}');
     if (!registry || typeof registry !== 'object' || Array.isArray(registry)) throw Error('产物记录损坏');
@@ -53,7 +59,14 @@ export async function executeWorkflowStep(figma, root, task) {
   }
   const p = operation.properties || {};
   if (!verifyOnly && Object.keys(p).length) {
-    if ('characters' in p || 'fontFamily' in p || 'fontStyle' in p || 'fontSize' in p) {
+    applyLayout(node, p, false);
+    // Hug/Fill 重排必须包含在步骤根节点内，避免局部快照遗漏祖先或兄弟。
+    if (Object.keys(p).some(k => k.startsWith('layout') || ['itemSpacing','paddingTop','paddingRight','paddingBottom','paddingLeft','textAutoResize','width','height'].includes(k))) {
+      let envelope = node;
+      while (['HORIZONTAL','VERTICAL','GRID'].includes(envelope.parent?.layoutMode)) envelope = envelope.parent;
+      if (!inside(envelope)) throw Error('布局重排超出步骤范围，请把 scopeNodeId 扩大到外层 Auto Layout 容器');
+    }
+    if ('characters' in p || 'fontFamily' in p || 'fontStyle' in p || 'fontSize' in p || 'textAutoResize' in p || ('layoutSizingHorizontal' in p && node.type === 'TEXT') || ('layoutSizingVertical' in p && node.type === 'TEXT')) {
       if (node.type !== 'TEXT') throw Error('文字属性要求 TEXT 节点');
       if (p.fontFamily || p.fontStyle) {
         const font = { family: p.fontFamily || node.fontName?.family || 'Inter', style: p.fontStyle || node.fontName?.style || 'Regular' };
@@ -69,7 +82,7 @@ export async function executeWorkflowStep(figma, root, task) {
         node[field] = p[field];
       }
     }
-    if ('width' in p || 'height' in p) node.resize(p.width ?? node.width, p.height ?? node.height);
+    applyLayout(node, p);
     if ('fill' in p) {
       if (!('fills' in node)) throw Error('节点不支持填充');
       const hex = p.fill.slice(1);
