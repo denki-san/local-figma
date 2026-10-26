@@ -86,8 +86,8 @@ export function createPluginI18n(language) {
     "Confirm this change"
   ],
   "confirmDetail": [
-    "请在下方选择允许或取消。",
-    "Choose Allow or Cancel below."
+    "Agent 将本次操作标记为高风险，原因见下方。请选择允许或取消。",
+    "The Agent marked this operation as high risk. Review the reason below, then choose Allow or Cancel."
   ],
   "checkTask": [
     "任务需检查",

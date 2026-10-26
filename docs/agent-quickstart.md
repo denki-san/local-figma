@@ -1,15 +1,15 @@
 # Agent quick start
 
-For an Agent that can execute local commands and inspect images. This guide covers local-figma v0.1.0-alpha.3. The user supplies a Figma frame link, an editing request, and access to the design file; the Agent handles installation, scoped edits, and verification.
+For an Agent that can execute local commands and inspect images. This guide covers local-figma v1.0.0. The user supplies a Figma frame link, an editing request, and access to the design file; the Agent handles installation, scoped edits, and verification.
 
 ## 1. Install and connect
 
 Requires macOS, Node.js 22+ with npm, and Figma Desktop. Figma's free Starter plan supports this workflow; AI assistant costs depend on the service used. The standard runtime requires no separate model API key.
 
-Download [figma-local-runtime-0.1.0-alpha.3.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.3/figma-local-runtime-0.1.0-alpha.3.tgz). Install the release asset, not GitHub's Source code archives. No build is required.
+Download [20261027-figma-local-runtime-1.0.0.tgz](https://github.com/denki-san/local-figma/releases/download/v1.0.0/20261027-figma-local-runtime-1.0.0.tgz). Install the release asset, not GitHub's Source code archives. No build is required.
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.3.tgz
+npm install -g ./20261027-figma-local-runtime-1.0.0.tgz
 figma-local help
 mkdir -p ~/figma-local-project
 cd ~/figma-local-project
@@ -113,3 +113,13 @@ If the bridge exited unexpectedly, follow the recovery procedure in [manual quic
 ## Local execution and data
 
 The bridge runs on loopback, and `.figma-agent/` stores local scripts, results, design text, and previews. Review those files before sharing them. Figma account and file permissions still apply; the runtime does not grant additional access. An Agent or optional extension may send content to its configured remote services, so local execution does not imply that the entire workflow is offline. See [security](../SECURITY.md) for details.
+
+## Confirmation rules
+
+Ordinary, scoped edits to text, colors, spacing, and layout do not require plugin approval. Do not add `--high-risk` merely because a command writes to Figma or because each edit is a new request.
+
+Use `run --high-risk '<specific reason>'` for destructive or broad changes such as bulk deletion, replacing a large existing region, or modifying shared component definitions. State the affected scope and concrete consequence in the reason; the plugin displays it before asking for approval for that job. User authorization still determines which changes may be submitted.
+
+Use `humanReview: true` only at workflow steps requiring a user decision, such as choosing a visual direction. It is a post-step acceptance checkpoint, separate from plugin approval. Routine steps should omit it. Snapshot acknowledgements are automatic and require no user click.
+
+To diagnose repeated prompts, inspect the submitted command and `job.json` → `risk.level`. A `high` value explains a plugin approval prompt; workflow `awaiting-review` instead points to `humanReview`.

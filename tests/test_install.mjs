@@ -45,7 +45,11 @@ test('实际安装包只含运行资源，离线安装后 CLI 与插件可用', 
   const project = path.join(temp, 'project');
   await fs.mkdir(project);
   const cli = async args => JSON.parse((await exec(bin, args, { cwd: project })).stdout);
-  assert((await cli(['help'])).commands.includes('diff <job-id>'));
+  const help = await cli(['help']);
+  assert(help.commands.includes('diff <job-id>'));
+  for (const flag of ['--help', '-h']) assert.deepEqual(await cli([flag]), help);
+  for (const flag of ['version', '--version', '-v']) assert.deepEqual(await cli([flag]), { name: pack.name, version: pack.version });
+  await assert.rejects(cli(['--version', 'unexpected']), error => error.code === 1);
   await assert.rejects(cli(['status']), error => error.code === 1 && JSON.parse(error.stdout).error.includes('figma-local connect'));
   assert.equal((await cli(['init', 'https://figma.com/design/example/Demo?node-id=1-2'])).binding.nodeId, '1:2');
   assert.equal((await cli(['guide', 'refine'])).brief.mode, 'refine');

@@ -1,6 +1,6 @@
-# Alpha 实际输出合同
+# 实际输出合同
 
-适用版本：0.1.0-alpha.2。当前实现与未来规划分开维护；schema 范围见 [schemas](../schemas/README.md)。
+适用版本：1.0.0。当前实现与未来规划分开维护；schema 范围见 [schemas](../schemas/README.md)。
 
 ## 提交、执行和证据
 
