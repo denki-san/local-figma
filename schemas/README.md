@@ -1,6 +1,6 @@
 # Schema 使用范围
 
-当前 Alpha 的磁盘与 CLI 输出合同：
+v1.0.0 的磁盘与 CLI 输出合同：
 
 - `job.schema.json`：`.figma-agent/runs/<id>/job.json`。
 - `result.schema.json`：同目录的 `result.json`，以及 job 中的 result 字段。

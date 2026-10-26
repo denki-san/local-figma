@@ -5,7 +5,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-![阶段：Alpha](https://img.shields.io/badge/status-alpha-orange)
+![阶段：正式版](https://img.shields.io/badge/status-stable-green)
 ![Node.js：22 及以上](https://img.shields.io/badge/node-%3E%3D22-339933)
 ![首版范围：macOS](https://img.shields.io/badge/platform-macOS-lightgrey)
 [![许可证：Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -33,12 +33,12 @@
 
 ## 直接下载安装
 
-需要 **macOS、Node.js 22+（含 npm）和 Figma Desktop**。下载 [figma-local-runtime-0.1.0-alpha.4.tgz](https://github.com/denki-san/local-figma/releases/download/v0.1.0-alpha.4/figma-local-runtime-0.1.0-alpha.4.tgz) 即可安装，无需克隆仓库或编译。选择这个 `.tgz` 附件；GitHub 的 “Source code” 压缩包是源码。
+需要 **macOS、Node.js 22+（含 npm）和 Figma Desktop**。下载 [20261027-figma-local-runtime-1.0.0.tgz](https://github.com/denki-san/local-figma/releases/download/v1.0.0/20261027-figma-local-runtime-1.0.0.tgz) 即可安装，无需克隆仓库或编译。选择这个 `.tgz` 附件；GitHub 的 “Source code” 压缩包是源码。
 
 在下载目录打开终端，执行：
 
 ```sh
-npm install -g ./figma-local-runtime-0.1.0-alpha.4.tgz
+npm install -g ./20261027-figma-local-runtime-1.0.0.tgz
 figma-local help
 mkdir -p ~/figma-local-project
 cd ~/figma-local-project
@@ -139,13 +139,13 @@ local-figma 负责连接和操作 Figma；理解你的需求、提出设计方�
 
 ## 下载和更多帮助
 
-当前试用版本：**[v0.1.0-alpha.4](https://github.com/denki-san/local-figma/releases/tag/v0.1.0-alpha.4)**。把本页发给 Agent，让它按上面的流程帮你开始。
+当前正式版本：**[v1.0.0](https://github.com/denki-san/local-figma/releases/tag/v1.0.0)**。把本页发给 Agent，让它按上面的流程帮你开始。
 
 - 参考更多需求说法：[任务示例](docs/first-task.md)
 - 给 Agent 看的安装和操作步骤：[Agent 操作指南](docs/agent-quickstart.md)
 - 自己运行命令：[手动安装指南](docs/quickstart.md)
 - 开发扩展：[扩展接口](docs/extensions.md)
-- 了解版本变化与数据处理：[版本说明](docs/releases/20261006-alpha-4.md) · [安全说明](SECURITY.md)
+- 了解版本变化与数据处理：[版本说明](docs/releases/20261027-v1.0.0.md) · [安全说明](SECURITY.md)
 
 - 多步骤校验任务：[工作流计划、断言与恢复](docs/20260930-workflows.md)
 

@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-项目已通过 GitHub Release 提供试用 Alpha。以下描述当前实现。
+项目已通过 GitHub Release 提供正式版 v1.0.0。以下描述当前实现。
 
 ## 核心边界
 

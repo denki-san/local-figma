@@ -24,11 +24,13 @@ const out = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n')
 const propertyHelp = ['props <完整属性名> --value <文字或true/false>', 'bind-fill <已确认的颜色变量ID>'];
 try {
   const raw = process.argv.slice(2);
+  const aliases = { '--help': 'help', '-h': 'help', '--version': 'version', '-v': 'version' };
+  if (aliases[raw[0]]) raw[0] = aliases[raw[0]];
   const requested = raw[0] || 'help';
   const { command, arg, risk, targetNodeId, timeoutSeconds, layoutValues, fontValues, propertyValue, inspectId, previousPluginStopped } =
     ['extension', 'workflow'].includes(requested) || !builtinCommands.has(requested) ? { command: requested } : parseArguments(raw);
   // 老项目保留显式本地绑定；普通工作目录自动使用固定会话。
-  if (!['init', 'setup', 'serve', 'help'].includes(command)) {
+  if (!['init', 'setup', 'serve', 'help', 'version'].includes(command)) {
     try { await fs.access(root(cwd)); }
     catch (error) {
       if (error.code !== 'ENOENT') throw error;
@@ -37,6 +39,10 @@ try {
     }
   }
   if (command === 'help') out({ commands: ['workflow import <plan.json> | status/run/retry/reconcile <id> | approve <id> <step-id> <review-note>', ...propertyHelp, 'init <figma-url>', 'connect', 'doctor', 'recover', 'resolve <原任务ID> --inspect <核验任务ID> --previous-plugin-stopped', 'extension list|add|disable|remove', 'status', 'context', 'text <新文字>', 'fill <#RRGGBB>', 'font [--size <字号>] [--family <字体名> --style <样式名>]', 'align <left|right|top|bottom|horizontal-center|vertical-center>', 'distribute <horizontal|vertical>', 'prototype <同页目标Frame的ID>', 'instance <已确认的同页主组件ID>', 'layout [--direction horizontal|vertical|none] [--horizontal-sizing fixed|hug|fill] [--vertical-sizing fixed|hug|fill] [--width <宽>] [--height <高>] [--gap <间距>] [--padding <内边距>] [--padding-top <上>] [--padding-right <右>] [--padding-bottom <下>] [--padding-left <左>] [--primary-align min|center|max|space-between] [--counter-align min|center|max]', 'inspect [--node <ID>]', 'preview [--node <ID>]', 'design-system [--node <ID>]', 'run <script.js> [--node <ID>] [--high-risk <风险说明>]', 'result <job-id>', 'wait <job-id> [--timeout <秒>]', 'history', 'diff <job-id>', 'validate <job-id>', `guide <${Object.keys(scenarios).join('|')}>`, `guide-check <${Object.keys(scenarios).join('|')}>`], installation: 'Node.js 22+；init 后 connect，导入返回的 manifest 并运行插件', script: '可信 JavaScript 函数体，可访问 figma 与 target，并通过 return 返回结果' });
+  else if (command === 'version') {
+    const { name, version } = JSON.parse(await fs.readFile(new URL('../package.json', import.meta.url), 'utf8'));
+    out({ name, version });
+  }
   else if (command === 'workflow') {
     const report = await workflowCommand(cwd, raw.slice(1)); out(report);
     if (report.state === 'failed') process.exitCode = 1;
